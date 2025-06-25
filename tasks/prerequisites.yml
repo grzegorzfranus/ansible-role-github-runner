@@ -1,0 +1,215 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Prerequisites
+# =============================================================================
+# This file verifies system prerequisites and installs required dependencies
+# before proceeding with GitHub Runner installation. It ensures the system
+# meets minimum requirements and has all necessary packages installed.
+#
+# Flow:
+# 1. Check system resources
+# 2. Update package cache
+# 3. Install required dependencies
+# 4. Install optional dependencies
+# 5. Verify systemd availability
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. System Resource Validation
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | prerequisites | Check available disk space
+  ansible.builtin.shell: |
+    df {{ github_runner_install_dir | dirname }} --output=avail --block-size=1G | tail -n1 | tr -d ' '
+  register: _github_runner_available_disk_space
+  changed_when: false
+  check_mode: false
+  tags:
+    - check
+    - requirements
+
+- name: 🧪 GitHub Runner | prerequisites | Validate disk space requirements
+  ansible.builtin.assert:
+    that:
+      - _github_runner_available_disk_space.stdout | int >= github_runner_min_disk_space_gb
+    fail_msg: "❌ Insufficient disk space. Available: {{ _github_runner_available_disk_space.stdout }}GB, Required: {{ github_runner_min_disk_space_gb }}GB"
+    success_msg: "✅ Sufficient disk space available: {{ _github_runner_available_disk_space.stdout }}GB"
+  tags:
+    - check
+    - requirements
+
+- name: 🔍 GitHub Runner | prerequisites | Check available memory
+  ansible.builtin.shell: |
+    free -m | awk 'NR==2{printf "%d", $7}'
+  register: _github_runner_available_memory
+  changed_when: false
+  check_mode: false
+  tags:
+    - check
+    - requirements
+
+- name: 🧪 GitHub Runner | prerequisites | Validate memory requirements
+  ansible.builtin.assert:
+    that:
+      - _github_runner_available_memory.stdout | int >= github_runner_min_memory_mb
+    fail_msg: "❌ Insufficient memory. Available: {{ _github_runner_available_memory.stdout }}MB, Required: {{ github_runner_min_memory_mb }}MB"
+    success_msg: "✅ Sufficient memory available: {{ _github_runner_available_memory.stdout }}MB"
+  tags:
+    - check
+    - requirements
+
+# -----------------------------------------------------------------------------
+# 2. Package Management Setup
+# -----------------------------------------------------------------------------
+- name: 🔄 GitHub Runner | prerequisites | Update package cache (Debian/Ubuntu)
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts['os_family'] == 'Debian'
+  tags:
+    - install
+    - packages
+
+- name: 🔄 GitHub Runner | prerequisites | Update package cache (RedHat/CentOS)
+  become: true
+  ansible.builtin.yum:
+    update_cache: true
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags:
+    - install
+    - packages
+
+# -----------------------------------------------------------------------------
+# 3. Required Dependencies Installation
+# -----------------------------------------------------------------------------
+- name: 📦 GitHub Runner | prerequisites | Install required dependencies (Debian/Ubuntu)
+  become: true
+  ansible.builtin.apt:
+    name: "{{ github_runner_dependencies }}"
+    state: present
+    update_cache: false
+  when: ansible_facts['os_family'] == 'Debian'
+  tags:
+    - install
+    - packages
+
+- name: 📦 GitHub Runner | prerequisites | Install required dependencies (RedHat/CentOS)
+  become: true
+  ansible.builtin.yum:
+    name: "{{ github_runner_dependencies }}"
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags:
+    - install
+    - packages
+
+
+
+# -----------------------------------------------------------------------------
+# 4. System Service Verification
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | prerequisites | Check systemd availability
+  ansible.builtin.command: systemctl --version
+  register: _github_runner_systemd_check
+  changed_when: false
+  check_mode: false
+  tags:
+    - check
+    - requirements
+
+- name: 🧪 GitHub Runner | prerequisites | Validate systemd availability
+  ansible.builtin.assert:
+    that:
+      - _github_runner_systemd_check.rc == 0
+    fail_msg: "❌ Systemd is not available or not functioning properly"
+    success_msg: "✅ Systemd is available and functional"
+  tags:
+    - check
+    - requirements
+
+# -----------------------------------------------------------------------------
+# 5. Network Connectivity Check
+# -----------------------------------------------------------------------------
+- name: 🌐 GitHub Runner | prerequisites | Test GitHub API connectivity
+  ansible.builtin.uri:
+    url: "{{ github_runner_api_base_url }}"
+    method: GET
+    timeout: "{{ github_runner_api_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+  register: _github_runner_api_connectivity
+  when: github_runner_access_token | length > 0
+  tags:
+    - check
+    - connectivity
+
+- name: ✅ GitHub Runner | prerequisites | Validate GitHub API connectivity
+  ansible.builtin.debug:
+    msg: "✅ GitHub API is accessible: {{ _github_runner_api_connectivity.status | default('N/A') }}"
+  when: >
+    github_runner_access_token | length > 0 and
+    _github_runner_api_connectivity is defined and
+    _github_runner_api_connectivity.status == 200
+  tags:
+    - check
+    - connectivity
+
+- name: 🌐 GitHub Runner | prerequisites | Test GitHub releases connectivity
+  ansible.builtin.uri:
+    url: "{{ github_runner_releases_api_url }}"
+    method: GET
+    timeout: "{{ github_runner_api_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+  register: _github_runner_releases_connectivity
+  tags:
+    - check
+    - connectivity
+
+- name: ✅ GitHub Runner | prerequisites | Validate GitHub releases connectivity
+  ansible.builtin.debug:
+    msg: "✅ GitHub releases API is accessible"
+  when: >
+    _github_runner_releases_connectivity is defined and
+    _github_runner_releases_connectivity.status == 200
+  tags:
+    - check
+    - connectivity
+
+# -----------------------------------------------------------------------------
+# 6. Security Prerequisites
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | prerequisites | Check sudo availability
+  ansible.builtin.command: sudo --version
+  register: _github_runner_sudo_check
+  changed_when: false
+  check_mode: false
+  when: github_runner_user_sudo_enabled | default(false)
+  tags:
+    - check
+    - security
+
+- name: ✅ GitHub Runner | prerequisites | Confirm sudo availability
+  ansible.builtin.debug:
+    msg: "✅ Sudo is available for runner user privileges"
+  when: >
+    github_runner_user_sudo_enabled | default(false) and
+    _github_runner_sudo_check.rc == 0
+  tags:
+    - check
+    - security
+
+# -----------------------------------------------------------------------------
+# 7. Prerequisites Summary
+# -----------------------------------------------------------------------------
+- name: 📊 GitHub Runner | prerequisites | Display prerequisites summary
+  ansible.builtin.debug:
+    msg:
+      - "🎯 GitHub Runner Prerequisites Summary:"
+      - "   💾 Disk Space: {{ _github_runner_available_disk_space.stdout }}GB available ({{ github_runner_min_disk_space_gb }}GB required)"
+      - "   🧠 Memory: {{ _github_runner_available_memory.stdout }}MB available ({{ github_runner_min_memory_mb }}MB required)"
+      - "   🔧 Systemd: {{ 'Available' if _github_runner_systemd_check.rc == 0 else 'Not Available' }}"
+      - "   🌐 GitHub API: {{ 'Connected' if (_github_runner_api_connectivity.status | default(0)) == 200 else 'Not Tested' }}"
+      - "   🔐 Sudo: {{ 'Available' if (_github_runner_sudo_check.rc | default(1)) == 0 else 'Not Required' }}"
+      - "   ✅ System ready for GitHub Runner installation"
+  tags:
+    - check
+    - summary

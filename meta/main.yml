@@ -1,0 +1,55 @@
+---
+galaxy_info:
+  role_name: github_runner
+  author: Grzegorz Franus
+  namespace: grzegorzfranus
+  description: >
+    Ansible role to install and configure GitHub Actions Runner for repository and organization level automation.
+    Supports dedicated system user management, latest version installation, and systemd service configuration.
+  license: Apache-2.0
+  company: EWARE
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Debian
+      versions:
+        - "bookworm"
+      galaxy_tags:
+        - debian
+        - debian12
+    - name: Ubuntu
+      versions:
+        - "jammy"
+        - "noble"
+      galaxy_tags:
+        - ubuntu
+        - ubuntu22
+        - ubuntu24
+    - name: EL
+      versions:
+        - "9"
+      galaxy_tags:
+        - el
+        - el9
+        - rhel
+        - rhel9
+    - name: Rocky
+      versions:
+        - "9.0"
+      galaxy_tags:
+        - rocky
+        - rocky9
+
+  galaxy_tags:
+    - github
+    - runner
+    - actions
+    - ci
+    - cd
+    - automation
+    - devops
+    - deployment
+    - system
+    - service
+
+dependencies: []

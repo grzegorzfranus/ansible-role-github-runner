@@ -1,0 +1,356 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Installation Verification
+# =============================================================================
+# This file performs comprehensive verification of the GitHub Actions Runner
+# installation, configuration, and connectivity. It validates all components
+# are working correctly and provides detailed status information.
+#
+# Flow:
+# 1. Verify installation files
+# 2. Check service status
+# 3. Validate runner registration
+# 4. Test GitHub connectivity
+# 5. Check runner availability
+# 6. Generate verification report
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Installation Files Verification
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | verify | Check installation directory
+  ansible.builtin.stat:
+    path: "{{ github_runner_install_dir }}"
+  register: _github_runner_verify_install_dir
+  tags:
+    - verify
+    - files
+
+- name: 🔍 GitHub Runner | verify | Check essential runner files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: _github_runner_verify_files
+  loop:
+    - "{{ github_runner_config_script }}"
+    - "{{ github_runner_run_script }}"
+    - "{{ github_runner_install_dir }}/bin/Runner.Listener"
+    - "{{ github_runner_install_dir }}/bin/Runner.Worker"
+    - "{{ github_runner_runner_config_file }}"
+    - "{{ github_runner_credentials_file }}"
+  tags:
+    - verify
+    - files
+
+- name: 🧪 GitHub Runner | verify | Validate essential files exist
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.size > 0
+    fail_msg: "❌ Essential file {{ item.item }} is missing or empty"
+    success_msg: "✅ Essential file {{ item.item }} is present"
+  loop: "{{ _github_runner_verify_files.results }}"
+  tags:
+    - verify
+    - files
+
+# -----------------------------------------------------------------------------
+# 2. File Permissions Verification
+# -----------------------------------------------------------------------------
+- name: 🔒 GitHub Runner | verify | Check file ownership
+  ansible.builtin.stat:
+    path: "{{ github_runner_install_dir }}"
+  register: _github_runner_verify_ownership
+  tags:
+    - verify
+    - permissions
+
+- name: 🧪 GitHub Runner | verify | Validate file ownership
+  ansible.builtin.assert:
+    that:
+      - _github_runner_verify_ownership.stat.pw_name == github_runner_user
+      - _github_runner_verify_ownership.stat.gr_name == github_runner_user_group
+    fail_msg: "❌ Installation directory ownership is incorrect. Expected: {{ github_runner_user }}:{{ github_runner_user_group }}"
+    success_msg: "✅ Installation directory ownership is correct: {{ _github_runner_verify_ownership.stat.pw_name }}:{{ _github_runner_verify_ownership.stat.gr_name }}"
+  tags:
+    - verify
+    - permissions
+
+# -----------------------------------------------------------------------------
+# 3. Service Status Verification
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | verify | Check service status
+  ansible.builtin.systemd:
+    name: "{{ github_runner_service_name }}"
+  register: _github_runner_verify_service
+  tags:
+    - verify
+    - service
+
+- name: 🧪 GitHub Runner | verify | Validate service is active
+  ansible.builtin.assert:
+    that:
+      - _github_runner_verify_service.status.ActiveState == "active"
+      - _github_runner_verify_service.status.SubState == "running"
+    fail_msg: "❌ GitHub Runner service is not active. State: {{ _github_runner_verify_service.status.ActiveState }}/{{ _github_runner_verify_service.status.SubState }}"
+    success_msg: "✅ GitHub Runner service is active and running"
+  when: github_runner_service_enabled | default(true)
+  tags:
+    - verify
+    - service
+
+# -----------------------------------------------------------------------------
+# 4. Runner Version Verification
+# -----------------------------------------------------------------------------
+- name: 🏷️ GitHub Runner | verify | Get installed runner version
+  ansible.builtin.shell: |
+    cd "{{ github_runner_install_dir }}"
+    sudo -u "{{ github_runner_user }}" ./bin/Runner.Listener --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
+  register: _github_runner_verify_version
+  become: true
+  changed_when: false
+  check_mode: false
+  tags:
+    - verify
+    - version
+
+- name: ✅ GitHub Runner | verify | Display runner version
+  ansible.builtin.debug:
+    msg: "✅ GitHub Runner version: {{ _github_runner_verify_version.stdout }}"
+  when: _github_runner_verify_version.stdout != "unknown"
+  tags:
+    - verify
+    - version
+
+# -----------------------------------------------------------------------------
+# 5. Runner Configuration Verification
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | verify | Extract runner configuration
+  ansible.builtin.shell: |
+    if [ -f "{{ github_runner_runner_config_file }}" ]; then
+      echo "Name: $(grep -oP '"agentName":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
+      echo "Pool: $(grep -oP '"poolName":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
+      echo "ID: $(grep -oP '"agentId":\s*\K[0-9]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
+      echo "URL: $(grep -oP '"serverUrl":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
+    else
+      echo "Configuration not found"
+    fi
+  register: _github_runner_verify_config
+  become: true
+  changed_when: false
+  check_mode: false
+  tags:
+    - verify
+    - config
+
+- name: 📊 GitHub Runner | verify | Display runner configuration
+  ansible.builtin.debug:
+    msg: "{{ _github_runner_verify_config.stdout_lines }}"
+  when: _github_runner_verify_config.stdout_lines is defined
+  tags:
+    - verify
+    - config
+
+# -----------------------------------------------------------------------------
+# 6. Process Verification
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | verify | Check runner processes
+  ansible.builtin.shell: |
+    ps -u "{{ github_runner_user }}" -o pid,ppid,cmd | grep -E "(Runner\.(Listener|Worker))" | grep -v grep || echo "No runner processes found"
+  register: _github_runner_verify_processes
+  changed_when: false
+  check_mode: false
+  tags:
+    - verify
+    - processes
+
+- name: 📊 GitHub Runner | verify | Display running processes
+  ansible.builtin.debug:
+    msg: "{{ _github_runner_verify_processes.stdout_lines }}"
+  when: >
+    _github_runner_verify_processes.stdout_lines is defined and
+    'No runner processes found' not in _github_runner_verify_processes.stdout
+  tags:
+    - verify
+    - processes
+
+# -----------------------------------------------------------------------------
+# 7. Network Connectivity Verification
+# -----------------------------------------------------------------------------
+- name: 🌐 GitHub Runner | verify | Test GitHub connectivity
+  ansible.builtin.uri:
+    url: "{{ github_runner_server_url }}"
+    method: GET
+    timeout: "{{ github_runner_api_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+  register: _github_runner_verify_connectivity
+  become: true
+  tags:
+    - verify
+    - connectivity
+
+- name: ✅ GitHub Runner | verify | Confirm GitHub connectivity
+  ansible.builtin.debug:
+    msg: "✅ GitHub connectivity verified: {{ _github_runner_verify_connectivity.status }}"
+  when: _github_runner_verify_connectivity.status == 200
+  tags:
+    - verify
+    - connectivity
+
+# -----------------------------------------------------------------------------
+# 8. Runner Registration Status
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | verify | Check runner registration status
+  ansible.builtin.uri:
+    url: "{{ github_runner_api_base_url }}/{{ 'orgs/' + github_runner_organization if github_runner_organization else 'repos/' + (github_runner_repository_url if not github_runner_repository_url.startswith('http') else github_runner_repository_url.split('/')[-2:] | join('/')) }}/actions/runners"
+    method: GET
+    headers:
+      Authorization: "token {{ github_runner_access_token }}"
+      Accept: "application/vnd.github.v3+json"
+    timeout: "{{ github_runner_api_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+  register: _github_runner_verify_registration
+  when: github_runner_access_token | length > 0
+  no_log: true
+  failed_when: false
+  tags:
+    - verify
+    - registration
+
+- name: 🔍 GitHub Runner | verify | Find this runner in GitHub
+  ansible.builtin.set_fact:
+    _github_runner_found_in_github: >-
+      {{
+        _github_runner_verify_registration.json.runners | default([]) |
+        selectattr('name', 'equalto', github_runner_name) |
+        list | length > 0
+      }}
+  when: >
+    github_runner_access_token | length > 0 and
+    _github_runner_verify_registration.status == 200
+  tags:
+    - verify
+    - registration
+
+- name: ✅ GitHub Runner | verify | Confirm runner registration
+  ansible.builtin.debug:
+    msg: "✅ Runner '{{ github_runner_name }}' is registered and visible in GitHub"
+  when: >
+    github_runner_access_token | length > 0 and
+    _github_runner_found_in_github | default(false)
+  tags:
+    - verify
+    - registration
+
+- name: ⚠️ GitHub Runner | verify | Runner registration warning
+  ansible.builtin.debug:
+    msg: "⚠️ Runner '{{ github_runner_name }}' is not visible in GitHub API (may be offline or not yet connected)"
+  when: >
+    github_runner_access_token | length > 0 and
+    _github_runner_verify_registration.status == 200 and
+    not (_github_runner_found_in_github | default(false))
+  tags:
+    - verify
+    - registration
+
+# -----------------------------------------------------------------------------
+# 9. Log File Verification
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | verify | Check for runner log files
+  ansible.builtin.find:
+    paths: "{{ github_runner_install_dir }}/_diag"
+    patterns: "*.log"
+    age: "1d"
+    age_stamp: mtime
+  register: _github_runner_verify_logs
+  failed_when: false
+  tags:
+    - verify
+    - logs
+
+- name: 📋 GitHub Runner | verify | Display recent log files
+  ansible.builtin.debug:
+    msg: "📋 Recent log files: {{ _github_runner_verify_logs.files | map(attribute='path') | list }}"
+  when: _github_runner_verify_logs.files | length > 0
+  tags:
+    - verify
+    - logs
+
+# -----------------------------------------------------------------------------
+# 10. System Resource Verification
+# -----------------------------------------------------------------------------
+- name: 💾 GitHub Runner | verify | Check disk space usage
+  ansible.builtin.shell: |
+    df -h "{{ github_runner_install_dir }}" | tail -n1 | awk '{print $4 " available (" $5 " used)"}'
+  register: _github_runner_verify_disk
+  changed_when: false
+  check_mode: false
+  tags:
+    - verify
+    - resources
+
+- name: 🧠 GitHub Runner | verify | Check memory usage
+  ansible.builtin.shell: |
+    free -h | awk 'NR==2{printf "%s available (%s used)", $7, $3}'
+  register: _github_runner_verify_memory
+  changed_when: false
+  check_mode: false
+  tags:
+    - verify
+    - resources
+
+# -----------------------------------------------------------------------------
+# 11. Comprehensive Verification Report
+# -----------------------------------------------------------------------------
+- name: 📊 GitHub Runner | verify | Generate verification report
+  ansible.builtin.debug:
+    msg:
+      - "🎯 GitHub Runner Verification Report:"
+      - "   📦 Installation: ✅ Complete ({{ github_runner_install_dir }})"
+      - "   🏷️ Version: {{ _github_runner_verify_version.stdout if _github_runner_verify_version.stdout != 'unknown' else '❓ Unknown' }}"
+      - "   👤 User: {{ github_runner_user }} ({{ _github_runner_verify_ownership.stat.pw_name }}:{{ _github_runner_verify_ownership.stat.gr_name }})"
+      - "   🚀 Service: {{ '✅ Active' if _github_runner_verify_service.status.ActiveState == 'active' else '❌ Inactive' }} ({{ github_runner_service_name }})"
+      - "   🔧 Configuration: {{ '✅ Valid' if _github_runner_verify_config.stdout != 'Configuration not found' else '❌ Missing' }}"
+      - "   🌐 Connectivity: {{ '✅ Connected' if _github_runner_verify_connectivity.status == 200 else '❌ Failed' }}"
+      - "   📋 Registration: {{ '✅ Registered' if (_github_runner_found_in_github | default(false)) else '⚠️ Not Visible' if github_runner_access_token | length > 0 else '❓ Not Checked' }}"
+      - "   🏃 Processes: {{ '✅ Running' if 'No runner processes found' not in _github_runner_verify_processes.stdout else '⚠️ None Found' }}"
+      - "   💾 Disk Space: {{ _github_runner_verify_disk.stdout }}"
+      - "   🧠 Memory: {{ _github_runner_verify_memory.stdout }}"
+      - "   📋 Log Files: {{ _github_runner_verify_logs.files | length }} recent files"
+      - "   ✅ Verification completed successfully"
+  tags:
+    - verify
+    - report
+
+# -----------------------------------------------------------------------------
+# 12. Health Check Summary
+# -----------------------------------------------------------------------------
+- name: 🏥 GitHub Runner | verify | Perform final health check
+  ansible.builtin.set_fact:
+    _github_runner_health_status: >-
+      {{
+        'healthy' if (
+          _github_runner_verify_install_dir.stat.exists and
+          _github_runner_verify_service.status.ActiveState == 'active' and
+          _github_runner_verify_connectivity.status == 200 and
+          _github_runner_verify_version.stdout != 'unknown'
+        ) else 'unhealthy'
+      }}
+  tags:
+    - verify
+    - health
+
+- name: 🎉 GitHub Runner | verify | Success notification
+  ansible.builtin.debug:
+    msg: "🎉 GitHub Runner verification completed successfully! Runner is healthy and ready for use."
+  when: _github_runner_health_status == 'healthy'
+  tags:
+    - verify
+    - health
+
+- name: ⚠️ GitHub Runner | verify | Health warning
+  ansible.builtin.debug:
+    msg: "⚠️ GitHub Runner verification found issues. Please review the verification report above."
+  when: _github_runner_health_status == 'unhealthy'
+  tags:
+    - verify
+    - health

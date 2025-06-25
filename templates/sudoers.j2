@@ -1,0 +1,38 @@
+# =============================================================================
+# GitHub Actions Runner - Sudoers Configuration
+# =============================================================================
+# This sudoers configuration grants sudo privileges to the GitHub Actions Runner user.
+# It allows the runner to execute privileged commands during CI/CD workflows.
+#
+# User: {{ github_runner_user }}
+# Commands: {{ github_runner_user_sudo_commands }}
+# Password Required: {{ 'No' if github_runner_user_sudo_nopasswd else 'Yes' }}
+#
+# Security Notes:
+# - This configuration should be used with caution in production environments
+# - Consider restricting to specific commands rather than ALL
+# - Monitor runner logs for privilege escalation attempts
+# =============================================================================
+
+# GitHub Actions Runner user sudo configuration
+{% if github_runner_user_sudo_nopasswd %}
+{{ github_runner_user }} ALL=(ALL) NOPASSWD: {{ github_runner_user_sudo_commands }}
+{% else %}
+{{ github_runner_user }} ALL=(ALL) {{ github_runner_user_sudo_commands }}
+{% endif %}
+
+# Additional security settings
+Defaults:{{ github_runner_user }} !visiblepw
+Defaults:{{ github_runner_user }} always_set_home
+Defaults:{{ github_runner_user }} match_group_by_gid
+Defaults:{{ github_runner_user }} always_query_group_plugin
+Defaults:{{ github_runner_user }} env_reset
+Defaults:{{ github_runner_user }} env_keep="COLORS DISPLAY HOSTNAME HISTSIZE KDEDIR LS_COLORS"
+Defaults:{{ github_runner_user }} env_keep+="MAIL PS1 PS2 QTDIR USERNAME LANG LC_ADDRESS LC_CTYPE"
+Defaults:{{ github_runner_user }} env_keep+="LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES"
+Defaults:{{ github_runner_user }} env_keep+="LC_MONETARY LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE"
+Defaults:{{ github_runner_user }} env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY"
+Defaults:{{ github_runner_user }} env_keep+="HOME PATH RUNNER_* GITHUB_* DOTNET_*"
+
+# Logging
+Defaults:{{ github_runner_user }} log_year, logfile="/var/log/sudo-{{ github_runner_user }}.log"

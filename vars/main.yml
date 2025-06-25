@@ -1,0 +1,73 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Internal Variables
+# =============================================================================
+# This file contains internal variables used by the role that should not be
+# modified by users. These include API endpoints, file paths, and other
+# constants used throughout the role.
+# =============================================================================
+
+# GitHub API Configuration
+github_runner_api_base_url: "https://api.github.com"
+github_runner_releases_api_url: "{{ github_runner_api_base_url }}/repos/actions/runner/releases"
+github_runner_latest_api_url: "{{ github_runner_releases_api_url }}/latest"
+
+# GitHub Runner Download Configuration
+github_runner_download_base_url: "https://github.com/actions/runner/releases/download"
+github_runner_package_name: "actions-runner-{{ github_runner_os }}-{{ github_runner_architecture }}"
+
+# File and Directory Paths
+github_runner_config_script: "{{ github_runner_install_dir }}/config.sh"
+github_runner_run_script: "{{ github_runner_install_dir }}/run.sh"
+github_runner_remove_script: "{{ github_runner_install_dir }}/config.sh remove"
+
+# Service Configuration
+github_runner_systemd_service_path: "/etc/systemd/system/{{ github_runner_service_name }}.service"
+github_runner_systemd_override_dir: "/etc/systemd/system/{{ github_runner_service_name }}.service.d"
+
+# Configuration Files
+github_runner_runner_config_file: "{{ github_runner_install_dir }}/.runner"
+github_runner_credentials_file: "{{ github_runner_install_dir }}/.credentials"
+
+# User Configuration
+github_runner_user_sudoers_file: "/etc/sudoers.d/{{ github_runner_user }}"
+github_runner_user_ssh_dir: "{{ github_runner_user_home }}/.ssh"
+github_runner_user_ssh_authorized_keys: "{{ github_runner_user_ssh_dir }}/authorized_keys"
+github_runner_user_ssh_private_key: "{{ github_runner_user_ssh_dir }}/id_{{ github_runner_user_ssh_key_type }}"
+github_runner_user_ssh_public_key: "{{ github_runner_user_ssh_dir }}/id_{{ github_runner_user_ssh_key_type }}.pub"
+
+# Supported Operating Systems
+github_runner_supported_os_families:
+  - "Debian"
+  - "RedHat"
+
+github_runner_supported_distributions:
+  - "Ubuntu"
+  - "Debian"
+  - "CentOS"
+  - "Rocky"
+  - "AlmaLinux"
+  - "OracleLinux"
+
+# Note: Package managers, states, scopes and default labels are handled inline in tasks
+
+# API Headers
+github_runner_api_headers:
+  Accept: "application/vnd.github.v3+json"
+  User-Agent: "ansible-github-runner-role/1.0"
+
+# Timeouts (seconds)
+github_runner_api_timeout: 30
+github_runner_registration_timeout: 120
+
+# File Permissions
+github_runner_default_file_mode: "0644"
+github_runner_executable_mode: "0755"
+github_runner_secure_file_mode: "0600"
+github_runner_directory_mode: "0755"
+
+# Validation Patterns (used in assert.yml)
+github_runner_valid_version_pattern: "^v?[0-9]+\\.[0-9]+\\.[0-9]+$"
+github_runner_valid_name_pattern: "^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$"
+github_runner_valid_url_pattern: "^https?://.*"
+github_runner_valid_token_pattern: "^(ghp_|gho_|ghu_|ghs_)[a-zA-Z0-9]{36,255}$"

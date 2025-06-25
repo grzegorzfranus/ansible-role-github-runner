@@ -1,0 +1,72 @@
+# =============================================================================
+# GitHub Actions Runner - Environment Configuration
+# =============================================================================
+# This file contains environment variables for the GitHub Actions Runner service.
+# It is loaded by the systemd service to configure the runner's runtime environment.
+#
+# Runner Configuration:
+#   - Name: {{ github_runner_name }}
+#   - Install Directory: {{ github_runner_install_dir }}
+#   - Work Directory: {{ github_runner_work_dir }}
+#   - Log Level: {{ github_runner_service_log_level }}
+# =============================================================================
+
+# Core Runner Configuration
+RUNNER_NAME="{{ github_runner_name }}"
+RUNNER_WORK_DIRECTORY="{{ github_runner_work_dir }}"
+RUNNER_LOG_LEVEL="{{ github_runner_service_log_level }}"
+
+# GitHub Configuration
+GITHUB_SERVER_URL="{{ github_runner_server_url }}"
+{% if github_runner_organization %}
+GITHUB_ORGANIZATION="{{ github_runner_organization }}"
+{% endif %}
+{% if github_runner_repository_url %}
+GITHUB_REPOSITORY="{{ github_runner_repository_url }}"
+{% endif %}
+
+# Runner Behavior
+RUNNER_ALLOW_RUNASROOT="0"
+RUNNER_EPHEMERAL="{{ 'true' if github_runner_ephemeral else 'false' }}"
+RUNNER_MAX_JOBS="{{ github_runner_max_jobs }}"
+
+# Security Configuration
+{% if not github_runner_verify_ssl %}
+RUNNER_DISABLE_SSL_VERIFICATION="true"
+{% endif %}
+{% if github_runner_disable_telemetry %}
+DOTNET_CLI_TELEMETRY_OPTOUT="1"
+{% endif %}
+{% if github_runner_disable_analytics %}
+RUNNER_DISABLE_ANALYTICS="true"
+{% endif %}
+
+# Network Configuration
+{% if github_runner_proxy_url %}
+HTTP_PROXY="{{ github_runner_proxy_url }}"
+HTTPS_PROXY="{{ github_runner_proxy_url }}"
+{% endif %}
+{% if github_runner_no_proxy %}
+NO_PROXY="{{ github_runner_no_proxy }}"
+{% endif %}
+
+# .NET Configuration
+DOTNET_SYSTEM_GLOBALIZATION_INVARIANT="1"
+DOTNET_ROOT="{{ github_runner_install_dir }}/externals/dotnet"
+DOTNET_NOLOGO="1"
+
+# Path Configuration
+PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:{{ github_runner_install_dir }}/bin"
+
+# Hook Scripts
+{% if github_runner_pre_job_hook %}
+RUNNER_PRE_JOB_HOOK="{{ github_runner_pre_job_hook }}"
+{% endif %}
+{% if github_runner_post_job_hook %}
+RUNNER_POST_JOB_HOOK="{{ github_runner_post_job_hook }}"
+{% endif %}
+
+# Custom Environment Variables
+{% for key, value in github_runner_custom_env.items() %}
+{{ key }}="{{ value }}"
+{% endfor %}

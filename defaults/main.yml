@@ -1,0 +1,207 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Default Variables
+# =============================================================================
+# This file defines default configuration values for the GitHub Actions Runner.
+# These values can be overridden by setting them in your playbook or inventory.
+#
+# Sections:
+#   1. General Settings
+#   2. GitHub Runner Installation
+#   3. GitHub Runner Configuration
+#   4. GitHub Runner User Management
+#   5. GitHub Runner Service Management
+#   6. Security Settings
+#   7. Advanced Options
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. General Settings
+# -----------------------------------------------------------------------------
+# Role execution control and basic configuration.
+
+# Define which parts of the role to execute (Options: 'all', 'install', 'configure', 'service', 'user')
+github_runner_role_action: "all"
+
+# Enable/disable GitHub Runner installation
+github_runner_enabled: true
+
+# Enable debug mode for troubleshooting
+github_runner_debug: false
+
+# -----------------------------------------------------------------------------
+# 2. GitHub Runner Installation
+# -----------------------------------------------------------------------------
+# GitHub Runner binary installation configuration
+
+# GitHub Runner version to install (use 'latest' for latest version)
+github_runner_version: "latest"
+
+# GitHub Runner architecture (auto-detected based on system)
+github_runner_architecture: "{{ 'x64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else 'x64' }}"
+
+# GitHub Runner operating system
+github_runner_os: "linux"
+
+# Installation directory for GitHub Runner
+github_runner_install_dir: "/opt/actions-runner"
+
+# Temporary directory for downloads
+github_runner_temp_dir: "/tmp/github-runner-install"
+
+# Clean up temporary files after installation
+github_runner_cleanup: true
+
+# Force reinstallation even if already installed
+github_runner_force_reinstall: false
+
+# GitHub API timeout for downloads (seconds)
+github_runner_download_timeout: 300
+
+# -----------------------------------------------------------------------------
+# 3. GitHub Runner Configuration
+# -----------------------------------------------------------------------------
+# GitHub server and runner configuration
+
+# GitHub instance URL (for GitHub Enterprise Server, change to your instance)
+github_runner_server_url: "https://github.com"
+
+# GitHub repository URL (leave empty for organization runner)
+# Format: "https://github.com/owner/repository" or "owner/repository"
+github_runner_repository_url: ""
+
+# GitHub organization name (leave empty for repository runner)
+github_runner_organization: ""
+
+# GitHub personal access token (required for automatic registration)
+# For repository runners: requires 'repo' scope
+# For organization runners: requires 'admin:org' scope
+github_runner_access_token: ""
+
+# Alternative: Direct repository URL (use instead of repository_url)
+github_runner_repo_url_direct: ""
+
+# Alternative: Registration token (use instead of access_token)
+github_runner_token_direct: ""
+
+# Runner configuration
+github_runner_name: "{{ ansible_hostname }}"
+github_runner_group: ""  # Runner group (for organization runners)
+github_runner_labels: "{{ ansible_distribution | lower }}-{{ ansible_distribution_version }},self-hosted,{{ ansible_architecture }}"
+github_runner_work_dir: "{{ github_runner_install_dir }}/_work"
+
+# Runner behavior
+github_runner_replace: false     # Replace existing runner with same name
+github_runner_ephemeral: false   # Runner is removed after job completion
+github_runner_disable_update: false  # Disable automatic runner updates
+
+# -----------------------------------------------------------------------------
+# 4. GitHub Runner User Management
+# -----------------------------------------------------------------------------
+# System user configuration for running GitHub Runner
+
+# Create a dedicated user for GitHub Runner
+github_runner_create_user: true
+
+# User configuration
+github_runner_user: "github-runner"
+github_runner_user_group: "github-runner"
+github_runner_user_uid: 1001
+github_runner_group_gid: 1001
+github_runner_user_home: "/home/{{ github_runner_user }}"
+github_runner_user_shell: "/bin/bash"
+github_runner_user_system: true
+
+# Sudo privileges configuration
+github_runner_user_sudo_enabled: false
+github_runner_user_sudo_nopasswd: true
+github_runner_user_sudo_commands: "ALL"  # Can be specific commands or "ALL"
+
+
+
+# SSH key management (optional)
+github_runner_user_ssh_key: ""  # Public SSH key content
+github_runner_user_ssh_key_file: ""  # Path to SSH key file
+
+# SSH key generation (optional)
+github_runner_user_generate_ssh_key: false  # Generate SSH key pair for deployment
+github_runner_user_ssh_key_type: "ed25519"  # SSH key type (rsa, ed25519, ecdsa)
+github_runner_user_ssh_key_bits: 4096       # Key bits (for RSA keys)
+github_runner_user_ssh_key_comment: "{{ github_runner_user }}@{{ ansible_hostname }}-github-runner"  # SSH key comment
+
+# -----------------------------------------------------------------------------
+# 5. GitHub Runner Service Management
+# -----------------------------------------------------------------------------
+# Systemd service configuration
+
+# Service configuration
+github_runner_service_enabled: true
+github_runner_service_state: "started"
+github_runner_service_name: "actions.runner.{{ github_runner_organization if github_runner_organization else github_runner_repository_url.split('/')[-1] if github_runner_repository_url else 'default' }}.{{ github_runner_name }}"
+
+# Service restart policy
+github_runner_service_restart_policy: "always"
+github_runner_service_restart_delay: 15
+
+# Service environment variables
+github_runner_service_environment:
+  RUNNER_ALLOW_RUNASROOT: "0"
+  DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+
+# Service logging
+github_runner_service_log_level: "info"  # Options: error, warn, info, debug
+
+# -----------------------------------------------------------------------------
+# 6. Security Settings
+# -----------------------------------------------------------------------------
+# Security and access control configuration
+
+# File permissions
+github_runner_install_dir_mode: "0755"
+
+# Security hardening
+github_runner_disable_telemetry: true
+github_runner_disable_analytics: true
+
+# Network security
+github_runner_proxy_url: ""  # HTTP proxy URL if needed
+github_runner_no_proxy: ""   # Comma-separated list of hosts to bypass proxy
+
+# Certificate validation
+github_runner_verify_ssl: true
+
+# -----------------------------------------------------------------------------
+# 7. Advanced Options
+# -----------------------------------------------------------------------------
+# Advanced configuration options
+
+# Runner capabilities
+github_runner_max_jobs: 1  # Maximum number of concurrent jobs
+
+# Resource limits (systemd service limits)
+github_runner_service_limits:
+  memory_max: "2G"
+  cpu_quota: "200%"
+  tasks_max: 4096
+
+# Custom environment variables for the runner
+github_runner_custom_env: {}
+#  CUSTOM_VAR: "value"
+#  ANOTHER_VAR: "another_value"
+
+# Hook scripts (optional - will be set as environment variables if provided)
+github_runner_pre_job_hook: ""  # Script to run before each job
+github_runner_post_job_hook: "" # Script to run after each job
+
+# Package dependencies
+github_runner_dependencies:
+  - curl
+  - wget
+  - tar
+  - gzip
+  - sudo
+  - git
+
+# System requirements validation
+github_runner_min_disk_space_gb: 10  # Minimum free disk space in GB
+github_runner_min_memory_mb: 512     # Minimum available memory in MB

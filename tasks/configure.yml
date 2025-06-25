@@ -1,0 +1,329 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Configuration
+# =============================================================================
+# This file handles the registration and configuration of the GitHub Actions Runner
+# with GitHub. It supports both repository-level and organization-level runners,
+# handles token-based authentication, and manages runner settings.
+#
+# Flow:
+# 1. Determine runner scope and target URL
+# 2. Get registration token (if needed)
+# 3. Check existing configuration
+# 4. Configure runner registration
+# 5. Validate configuration
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Runner Scope and URL Determination
+# -----------------------------------------------------------------------------
+- name: 🎯 GitHub Runner | configure | Determine runner scope and target URL
+  ansible.builtin.set_fact:
+    _github_runner_scope: >-
+      {{
+        'organization' if github_runner_organization | length > 0
+        else 'repository'
+      }}
+    _github_runner_target_url: >-
+      {{
+        github_runner_repo_url_direct if github_runner_repo_url_direct | length > 0
+        else (
+          github_runner_server_url + '/' + github_runner_organization if github_runner_organization | length > 0
+          else (
+            github_runner_repository_url if github_runner_repository_url.startswith('http')
+            else github_runner_server_url + '/' + github_runner_repository_url
+          )
+        )
+      }}
+  tags:
+    - configure
+    - setup
+
+- name: 📊 GitHub Runner | configure | Display runner configuration
+  ansible.builtin.debug:
+    msg:
+      - "🎯 GitHub Runner Configuration:"
+      - "   🔗 Scope: {{ _github_runner_scope }}"
+      - "   🌐 Target URL: {{ _github_runner_target_url }}"
+      - "   🏷️ Name: {{ github_runner_name }}"
+      - "   🏃 Labels: {{ github_runner_labels }}"
+      - "   👥 Group: {{ github_runner_group if github_runner_group else 'default' }}"
+      - "   💨 Ephemeral: {{ github_runner_ephemeral }}"
+      - "   🔄 Replace: {{ github_runner_replace }}"
+  tags:
+    - configure
+    - info
+
+# -----------------------------------------------------------------------------
+# 2. Registration Token Acquisition (if needed)
+# -----------------------------------------------------------------------------
+- name: 🔑 GitHub Runner | configure | Get repository registration token
+  ansible.builtin.uri:
+    url: "{{ github_runner_api_base_url }}/repos/{{ github_runner_repository_url if not github_runner_repository_url.startswith('http') else github_runner_repository_url.split('/')[-2:] | join('/') }}/actions/runners/registration-token"
+    method: POST
+    headers:
+      Authorization: "token {{ github_runner_access_token }}"
+      Accept: "application/vnd.github.v3+json"
+    timeout: "{{ github_runner_api_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+    status_code: [200, 201]
+  register: _github_runner_repo_token
+  when: >
+    _github_runner_scope == 'repository' and
+    github_runner_access_token | length > 0 and
+    github_runner_token_direct | length == 0
+  no_log: true
+  tags:
+    - configure
+    - token
+
+- name: 🔑 GitHub Runner | configure | Get organization registration token
+  ansible.builtin.uri:
+    url: "{{ github_runner_api_base_url }}/orgs/{{ github_runner_organization }}/actions/runners/registration-token"
+    method: POST
+    headers:
+      Authorization: "token {{ github_runner_access_token }}"
+      Accept: "application/vnd.github.v3+json"
+    timeout: "{{ github_runner_api_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+    status_code: [200, 201]
+  register: _github_runner_org_token
+  when: >
+    _github_runner_scope == 'organization' and
+    github_runner_access_token | length > 0 and
+    github_runner_token_direct | length == 0
+  no_log: true
+  tags:
+    - configure
+    - token
+
+- name: 🏷️ GitHub Runner | configure | Set registration token
+  ansible.builtin.set_fact:
+    _github_runner_registration_token: >-
+      {{
+        github_runner_token_direct if github_runner_token_direct | length > 0
+        else (
+          _github_runner_repo_token.json.token if _github_runner_scope == 'repository' and _github_runner_repo_token is defined
+          else _github_runner_org_token.json.token if _github_runner_scope == 'organization' and _github_runner_org_token is defined
+          else ''
+        )
+      }}
+  no_log: true
+  tags:
+    - configure
+    - token
+
+- name: 🧪 GitHub Runner | configure | Validate registration token
+  ansible.builtin.assert:
+    that:
+      - _github_runner_registration_token | length > 0
+    fail_msg: "❌ Failed to obtain registration token. Check your access token permissions and network connectivity."
+    success_msg: "✅ Registration token obtained successfully"
+  tags:
+    - configure
+    - token
+
+# -----------------------------------------------------------------------------
+# 3. Existing Configuration Check
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | configure | Check for existing runner configuration
+  ansible.builtin.stat:
+    path: "{{ github_runner_runner_config_file }}"
+  register: _github_runner_existing_config
+  tags:
+    - configure
+    - check
+
+- name: 🔍 GitHub Runner | configure | Check current runner registration
+  ansible.builtin.shell: |
+    if [ -f "{{ github_runner_runner_config_file }}" ]; then
+      grep -oP '"agentName":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo "unknown"
+    else
+      echo "not_configured"
+    fi
+  register: _github_runner_current_name
+  become: true
+  changed_when: false
+  check_mode: false
+  tags:
+    - configure
+    - check
+
+- name: 📊 GitHub Runner | configure | Display current configuration status
+  ansible.builtin.debug:
+    msg:
+      - "📊 Current Runner Configuration Status:"
+      - "   📝 Config File: {{ 'Exists' if _github_runner_existing_config.stat.exists else 'Missing' }}"
+      - "   🏷️ Current Name: {{ _github_runner_current_name.stdout if _github_runner_current_name.stdout != 'not_configured' else 'Not Configured' }}"
+      - "   🔄 Force Reconfigure: {{ github_runner_replace }}"
+  tags:
+    - configure
+    - check
+
+# -----------------------------------------------------------------------------
+# 4. Runner Removal (if replacing)
+# -----------------------------------------------------------------------------
+- name: 🗑️ GitHub Runner | configure | Remove existing runner configuration
+  ansible.builtin.shell: |
+    cd "{{ github_runner_install_dir }}"
+    sudo -u "{{ github_runner_user }}" ./config.sh remove --unattended --token "{{ _github_runner_registration_token }}"
+  become: true
+  when: >
+    _github_runner_existing_config.stat.exists and
+    github_runner_replace | bool
+  no_log: true
+  failed_when: false
+  tags:
+    - configure
+    - remove
+
+# -----------------------------------------------------------------------------
+# 5. Runner Configuration
+# -----------------------------------------------------------------------------
+- name: 🧪 GitHub Runner | configure | Determine if configuration is needed
+  ansible.builtin.set_fact:
+    _github_runner_needs_configuration: >-
+      {{
+        not _github_runner_existing_config.stat.exists or
+        github_runner_replace | bool or
+        _github_runner_current_name.stdout != github_runner_name
+      }}
+  tags:
+    - configure
+    - check
+
+- name: 🔧 GitHub Runner | configure | Configure GitHub Runner
+  ansible.builtin.shell: |
+    cd "{{ github_runner_install_dir }}"
+    sudo -u "{{ github_runner_user }}" \
+      RUNNER_ALLOW_RUNASROOT=0 \
+      ./config.sh \
+      --url "{{ _github_runner_target_url }}" \
+      --token "{{ _github_runner_registration_token }}" \
+      --name "{{ github_runner_name }}" \
+      --labels "{{ github_runner_labels }}" \
+      --work "{{ github_runner_work_dir }}" \
+      --unattended \
+      --runasservice \
+      {{ '--ephemeral' if github_runner_ephemeral else '' }} \
+      {{ '--replace' if github_runner_replace else '' }} \
+      {{ '--runnergroup "' + github_runner_group + '"' if github_runner_group else '' }}
+  become: true
+  when: _github_runner_needs_configuration | bool
+  no_log: true
+  register: _github_runner_config_result
+  tags:
+    - configure
+    - register
+
+- name: ✅ GitHub Runner | configure | Verify runner configuration
+  ansible.builtin.debug:
+    msg: "✅ GitHub Runner configured successfully"
+  when: >
+    _github_runner_needs_configuration | bool and
+    _github_runner_config_result.rc == 0
+  tags:
+    - configure
+    - verify
+
+- name: ❌ GitHub Runner | configure | Handle configuration failure
+  ansible.builtin.fail:
+    msg: "❌ GitHub Runner configuration failed: {{ _github_runner_config_result.stderr | default('Unknown error') }}"
+  when: >
+    _github_runner_needs_configuration | bool and
+    _github_runner_config_result.rc != 0
+  tags:
+    - configure
+    - verify
+
+# -----------------------------------------------------------------------------
+# 6. Configuration Files Verification
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | configure | Verify configuration files exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: _github_runner_config_files
+  loop:
+    - "{{ github_runner_runner_config_file }}"
+    - "{{ github_runner_credentials_file }}"
+  tags:
+    - configure
+    - verify
+
+- name: 🧪 GitHub Runner | configure | Validate configuration files
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.size > 0
+    fail_msg: "❌ Configuration file {{ item.item }} is missing or empty"
+    success_msg: "✅ Configuration file {{ item.item }} is present and valid"
+  loop: "{{ _github_runner_config_files.results }}"
+  tags:
+    - configure
+    - verify
+
+# -----------------------------------------------------------------------------
+# 7. Configuration Permissions
+# -----------------------------------------------------------------------------
+- name: 🔒 GitHub Runner | configure | Set configuration file permissions
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user_group }}"
+    mode: "{{ github_runner_secure_file_mode }}"
+  loop:
+    - "{{ github_runner_runner_config_file }}"
+    - "{{ github_runner_credentials_file }}"
+  tags:
+    - configure
+    - permissions
+
+# -----------------------------------------------------------------------------
+# 8. Extract Runner Information
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | configure | Extract runner configuration details
+  ansible.builtin.shell: |
+    if [ -f "{{ github_runner_runner_config_file }}" ]; then
+      echo "Agent Name: $(grep -oP '"agentName":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
+      echo "Agent Pool: $(grep -oP '"poolName":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
+      echo "Agent ID: $(grep -oP '"agentId":\s*\K[0-9]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
+      echo "Server URL: $(grep -oP '"serverUrl":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
+    else
+      echo "Configuration file not found"
+    fi
+  register: _github_runner_config_details
+  become: true
+  changed_when: false
+  tags:
+    - configure
+    - info
+
+# -----------------------------------------------------------------------------
+# 9. Configuration Summary
+# -----------------------------------------------------------------------------
+- name: 📊 GitHub Runner | configure | Display configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "🎯 GitHub Runner Configuration Summary:"
+      - "   📝 Action: {{ 'Configured' if _github_runner_needs_configuration else 'Skipped (already configured)' }}"
+      - "   🔗 Scope: {{ _github_runner_scope.title() }}"
+      - "   🌐 URL: {{ _github_runner_target_url }}"
+      - "   🏷️ Name: {{ github_runner_name }}"
+      - "   🏃 Labels: {{ github_runner_labels }}"
+      - "   📁 Work Dir: {{ github_runner_work_dir }}"
+      - "   💨 Ephemeral: {{ github_runner_ephemeral }}"
+      - "   👥 Group: {{ github_runner_group if github_runner_group else 'default' }}"
+      - "   🔒 Config Files: {{ 'Secured' if _github_runner_config_files.results | selectattr('stat.exists') | list | length == 2 else 'Issue Detected' }}"
+      - "   ✅ Configuration {{ 'completed successfully' if _github_runner_needs_configuration else 'verified' }}"
+  tags:
+    - configure
+    - summary
+
+- name: 📋 GitHub Runner | configure | Display runner details
+  ansible.builtin.debug:
+    msg: "{{ _github_runner_config_details.stdout_lines }}"
+  when: _github_runner_config_details.stdout_lines is defined
+  tags:
+    - configure
+    - info

@@ -1,0 +1,362 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - User Management
+# =============================================================================
+# This file handles the creation and configuration of a dedicated system user
+# for running the GitHub Actions Runner. It includes group creation, user setup,
+# sudo privileges configuration, SSH key management, and proper permissions.
+#
+# Flow:
+# 1. Create system group
+# 2. Create system user
+# 3. Configure sudo privileges (optional)
+# 4. Setup SSH keys (optional)
+# 5. Add user to additional groups
+# 6. Set up home directory permissions
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. System Group Creation
+# -----------------------------------------------------------------------------
+- name: 👥 GitHub Runner | user | Create GitHub Runner system group
+  become: true
+  ansible.builtin.group:
+    name: "{{ github_runner_user_group }}"
+    gid: "{{ github_runner_group_gid }}"
+    system: "{{ github_runner_user_system }}"
+    state: present
+  tags:
+    - user
+    - groups
+
+# -----------------------------------------------------------------------------
+# 2. System User Creation
+# -----------------------------------------------------------------------------
+- name: 👤 GitHub Runner | user | Create GitHub Runner system user
+  become: true
+  ansible.builtin.user:
+    name: "{{ github_runner_user }}"
+    uid: "{{ github_runner_user_uid }}"
+    group: "{{ github_runner_user_group }}"
+    home: "{{ github_runner_user_home }}"
+    shell: "{{ github_runner_user_shell }}"
+    system: "{{ github_runner_user_system }}"
+    create_home: true
+    state: present
+  tags:
+    - user
+    - create
+
+- name: 🔍 GitHub Runner | user | Check if user was created successfully
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ github_runner_user }}"
+  register: _github_runner_user_info
+  tags:
+    - user
+    - verify
+
+- name: ✅ GitHub Runner | user | Confirm user creation
+  ansible.builtin.debug:
+    msg: 
+      - "✅ GitHub Runner user created: {{ github_runner_user }} (UID: {{ _github_runner_user_info.ansible_facts.getent_passwd[github_runner_user][1] }})"
+      - "   🏠 Actual Home Dir: {{ _github_runner_user_info.ansible_facts.getent_passwd[github_runner_user][4] }}"
+      - "   🏠 Expected Home Dir: {{ github_runner_user_home }}"
+  tags:
+    - user
+    - verify
+
+- name: ⚠️ GitHub Runner | user | Fix home directory if incorrect
+  become: true
+  ansible.builtin.user:
+    name: "{{ github_runner_user }}"
+    home: "{{ github_runner_user_home }}"
+    move_home: true
+  when: _github_runner_user_info.ansible_facts.getent_passwd[github_runner_user][4] != github_runner_user_home
+  tags:
+    - user
+    - fix
+
+# -----------------------------------------------------------------------------
+# 3. Home Directory Permissions
+# -----------------------------------------------------------------------------
+- name: 🔒 GitHub Runner | user | Set home directory permissions
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_user_home }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user_group }}"
+    mode: "0750"
+    state: directory
+  tags:
+    - user
+    - permissions
+
+# -----------------------------------------------------------------------------
+# 4. Sudo Configuration (Optional)
+# -----------------------------------------------------------------------------
+- name: 🔐 GitHub Runner | user | Create sudoers configuration
+  become: true
+  ansible.builtin.template:
+    src: "sudoers.j2"
+    dest: "{{ github_runner_user_sudoers_file }}"
+    owner: root
+    group: root
+    mode: "0440"
+    backup: true
+    validate: "/usr/sbin/visudo -cf %s"
+  when: github_runner_user_sudo_enabled | default(false)
+  tags:
+    - user
+    - sudo
+    - security
+
+- name: ✅ GitHub Runner | user | Confirm sudo configuration
+  ansible.builtin.debug:
+    msg: "✅ Sudo privileges configured for {{ github_runner_user }}: {{ 'NOPASSWD' if github_runner_user_sudo_nopasswd else 'with password' }}"
+  when: github_runner_user_sudo_enabled | default(false)
+  tags:
+    - user
+    - sudo
+
+- name: 🔍 GitHub Runner | user | Remove existing sudoers file if sudo disabled
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_user_sudoers_file }}"
+    state: absent
+  when: not (github_runner_user_sudo_enabled | default(false))
+  tags:
+    - user
+    - sudo
+    - cleanup
+
+# -----------------------------------------------------------------------------
+# 5. SSH Key Management (Optional)
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | user | Verify user home directory variable
+  ansible.builtin.set_fact:
+    github_runner_user_home_verified: "/home/{{ github_runner_user }}"
+  when: >
+    (github_runner_user_ssh_key | length > 0) or 
+    (github_runner_user_ssh_key_file | length > 0) or 
+    github_runner_user_generate_ssh_key | default(false)
+  tags:
+    - user
+    - ssh
+    - setup
+
+- name: 🔍 GitHub Runner | user | Override SSH paths with verified home
+  ansible.builtin.set_fact:
+    github_runner_user_ssh_dir_verified: "{{ github_runner_user_home_verified | default(github_runner_user_home) }}/.ssh"
+    github_runner_user_ssh_private_key_verified: "{{ github_runner_user_home_verified | default(github_runner_user_home) }}/.ssh/id_{{ github_runner_user_ssh_key_type }}"
+    github_runner_user_ssh_public_key_verified: "{{ github_runner_user_home_verified | default(github_runner_user_home) }}/.ssh/id_{{ github_runner_user_ssh_key_type }}.pub"
+  when: >
+    (github_runner_user_ssh_key | length > 0) or 
+    (github_runner_user_ssh_key_file | length > 0) or 
+    github_runner_user_generate_ssh_key | default(false)
+  tags:
+    - user
+    - ssh
+    - setup
+
+- name: 📁 GitHub Runner | user | Create SSH directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_user_ssh_dir_verified | default(github_runner_user_ssh_dir) }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user_group }}"
+    mode: "0700"
+    state: directory
+  when: >
+    (github_runner_user_ssh_key | length > 0) or 
+    (github_runner_user_ssh_key_file | length > 0) or 
+    github_runner_user_generate_ssh_key | default(false)
+  tags:
+    - user
+    - ssh
+    - security
+
+# -----------------------------------------------------------------------------
+# 5a. SSH Key Generation (Optional)
+# -----------------------------------------------------------------------------
+
+- name: 🔐 GitHub Runner | user | Generate SSH key pair
+  become: true
+  community.crypto.openssh_keypair:
+    path: "{{ github_runner_user_ssh_private_key_verified | default(github_runner_user_ssh_private_key) }}"
+    type: "{{ github_runner_user_ssh_key_type }}"
+    size: "{{ github_runner_user_ssh_key_bits if github_runner_user_ssh_key_type == 'rsa' else omit }}"
+    comment: "{{ github_runner_user_ssh_key_comment }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user_group }}"
+    mode: "0600"
+    state: present
+    force: false
+  when: github_runner_user_generate_ssh_key | default(false)
+  register: _github_runner_ssh_key_generated
+  tags:
+    - user
+    - ssh
+    - generate
+
+- name: 🔍 GitHub Runner | user | Debug SSH key paths
+  ansible.builtin.debug:
+    msg:
+      - "🔍 SSH Key Path Debug:"
+      - "   👤 User: {{ github_runner_user }}"
+      - "   🏠 User Home (Original): {{ github_runner_user_home }}"
+      - "   🏠 User Home (Verified): {{ github_runner_user_home_verified | default('not set') }}"
+      - "   📁 SSH Dir (Original): {{ github_runner_user_ssh_dir }}"
+      - "   📁 SSH Dir (Verified): {{ github_runner_user_ssh_dir_verified | default('not set') }}"
+      - "   🔐 Private Key: {{ github_runner_user_ssh_private_key_verified | default(github_runner_user_ssh_private_key) }}"
+      - "   📄 Public Key: {{ github_runner_user_ssh_public_key_verified | default(github_runner_user_ssh_public_key) }}"
+  when: >
+    github_runner_user_generate_ssh_key | default(false) and
+    _github_runner_ssh_key_generated is succeeded
+  tags:
+    - user
+    - ssh
+    - generate
+
+- name: 📋 GitHub Runner | user | Read generated public key
+  become: true
+  ansible.builtin.slurp:
+    src: "{{ github_runner_user_ssh_public_key_verified | default(github_runner_user_ssh_public_key) }}"
+  register: _github_runner_generated_public_key
+  when: >
+    github_runner_user_generate_ssh_key | default(false) and
+    _github_runner_ssh_key_generated is succeeded
+  tags:
+    - user
+    - ssh
+    - generate
+
+- name: ✅ GitHub Runner | user | Display generated public key
+  ansible.builtin.debug:
+    msg:
+      - "🔑 SSH Key Pair Generated Successfully!"
+      - "   📁 Private Key: {{ github_runner_user_ssh_private_key_verified | default(github_runner_user_ssh_private_key) }}"
+      - "   📄 Public Key: {{ github_runner_user_ssh_public_key_verified | default(github_runner_user_ssh_public_key) }}"
+      - ""
+      - "📋 Public Key Content (add to target servers):"
+      - "{{ _github_runner_generated_public_key.content | b64decode | trim }}"
+      - ""
+      - "🚀 Usage in GitHub Actions:"
+      - "   - Add private key to GitHub Secrets as SSH_PRIVATE_KEY"
+      - "   - Add public key to target server's ~/.ssh/authorized_keys"
+  when: >
+    github_runner_user_generate_ssh_key | default(false) and
+    _github_runner_ssh_key_generated is succeeded and
+    _github_runner_generated_public_key is defined
+  tags:
+    - user
+    - ssh
+    - generate
+
+- name: 🔑 GitHub Runner | user | Add generated public key to authorized_keys
+  become: true
+  ansible.builtin.authorized_key:
+    user: "{{ github_runner_user }}"
+    key: "{{ _github_runner_generated_public_key.content | b64decode | trim }}"
+    state: present
+    exclusive: false
+  when: >
+    github_runner_user_generate_ssh_key | default(false) and
+    _github_runner_ssh_key_generated is succeeded and
+    _github_runner_generated_public_key is defined
+  tags:
+    - user
+    - ssh
+    - generate
+
+# -----------------------------------------------------------------------------
+# 5b. SSH Key Import (Optional)
+# -----------------------------------------------------------------------------
+
+- name: 🔑 GitHub Runner | user | Add SSH public key from content
+  become: true
+  ansible.builtin.authorized_key:
+    user: "{{ github_runner_user }}"
+    key: "{{ github_runner_user_ssh_key }}"
+    state: present
+    exclusive: false
+  when: github_runner_user_ssh_key | length > 0
+  tags:
+    - user
+    - ssh
+    - security
+
+- name: 🔑 GitHub Runner | user | Add SSH public key from file
+  become: true
+  ansible.builtin.authorized_key:
+    user: "{{ github_runner_user }}"
+    key: "{{ lookup('file', github_runner_user_ssh_key_file) }}"
+    state: present
+    exclusive: false
+  when: >
+    github_runner_user_ssh_key_file | length > 0 and
+    github_runner_user_ssh_key | length == 0
+  tags:
+    - user
+    - ssh
+    - security
+
+- name: ✅ GitHub Runner | user | Confirm SSH key configuration
+  ansible.builtin.debug:
+    msg: "✅ SSH key configured for {{ github_runner_user }}"
+  when: >
+    (github_runner_user_ssh_key | length > 0) or 
+    (github_runner_user_ssh_key_file | length > 0) or 
+    github_runner_user_generate_ssh_key | default(false)
+  tags:
+    - user
+    - ssh
+
+
+
+# -----------------------------------------------------------------------------
+# 6. Installation Directory Preparation
+# -----------------------------------------------------------------------------
+- name: 📁 GitHub Runner | user | Create installation directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_install_dir }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user_group }}"
+    mode: "{{ github_runner_install_dir_mode }}"
+    state: directory
+  tags:
+    - user
+    - directories
+
+- name: 📁 GitHub Runner | user | Create work directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_work_dir }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user_group }}"
+    mode: "{{ github_runner_install_dir_mode }}"
+    state: directory
+  tags:
+    - user
+    - directories
+
+# -----------------------------------------------------------------------------
+# 7. User Configuration Summary
+# -----------------------------------------------------------------------------
+- name: 📊 GitHub Runner | user | Display user configuration summary
+  ansible.builtin.debug:
+    msg:
+      - "🎯 GitHub Runner User Configuration Summary:"
+      - "   👤 User: {{ github_runner_user }} (UID: {{ github_runner_user_uid }})"
+      - "   👥 Group: {{ github_runner_user_group }} (GID: {{ github_runner_group_gid }})"
+      - "   🏠 Home: {{ github_runner_user_home }}"
+      - "   🐚 Shell: {{ github_runner_user_shell }}"
+      - "   🔐 Sudo: {{ 'Enabled' if github_runner_user_sudo_enabled else 'Disabled' }}"
+      - "   🔑 SSH Key: {{ 'Configured' if ((github_runner_user_ssh_key | length > 0) or (github_runner_user_ssh_key_file | length > 0) or github_runner_user_generate_ssh_key) else 'Not Configured' }}"
+      - "   👥 Additional Groups: None"
+      - "   📁 Install Dir: {{ github_runner_install_dir }}"
+      - "   ✅ User configuration completed successfully"
+  tags:
+    - user
+    - summary

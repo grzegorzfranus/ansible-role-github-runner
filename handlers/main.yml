@@ -1,0 +1,47 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Handlers
+# =============================================================================
+# Handlers are used to perform service actions in response to configuration changes.
+# This handler manages GitHub Runner service state when notified by tasks that modify
+# system configuration.
+#
+# Variables:
+#   github_runner_service_name - Name of the GitHub Runner service to manage
+#   github_runner_service_enabled - Boolean flag to control service enablement
+#
+# Handler Triggers:
+#   restart github runner - Triggered when GitHub Runner configuration changes
+#   reload systemd - Triggered when systemd service files change
+#   stop github runner - Triggered when runner needs to be stopped
+#   start github runner - Triggered when runner needs to be started
+# =============================================================================
+
+- name: 🔄 GitHub Runner | handlers | Reload systemd daemon
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: "reload systemd"
+
+- name: 🔄 GitHub Runner | handlers | Restart GitHub Runner service
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ github_runner_service_name }}"
+    state: restarted
+    enabled: "{{ github_runner_service_enabled }}"
+  listen: "restart github runner"
+
+- name: 🛑 GitHub Runner | handlers | Stop GitHub Runner service
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ github_runner_service_name }}"
+    state: stopped
+  listen: "stop github runner"
+
+- name: 🚀 GitHub Runner | handlers | Start GitHub Runner service
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ github_runner_service_name }}"
+    state: started
+    enabled: "{{ github_runner_service_enabled }}"
+  listen: "start github runner"

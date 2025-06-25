@@ -1,0 +1,125 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Main Tasks
+# =============================================================================
+# This is the main task file for the GitHub Runner role. It orchestrates the execution
+# of all role components in the correct order. Each task is tagged appropriately
+# to allow for selective execution.
+#
+# Flow:
+# 1. Load OS-specific variables
+# 2. Validate role requirements and variables
+# 3. Check system prerequisites
+# 4. Create dedicated user (optional)
+# 5. Install GitHub Runner
+# 6. Configure GitHub Runner
+# 7. Setup systemd service
+# 8. Verify installation (optional)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. OS-Specific Variables
+# -----------------------------------------------------------------------------
+- name: 📂 GitHub Runner | include_vars | Gather OS specific variables
+  ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      files:
+        - "{{ ansible_facts['distribution'] | lower }}_{{ ansible_facts['distribution_version'] | lower }}.yml"
+        - "{{ ansible_facts['distribution'] | lower }}_{{ ansible_facts['distribution_major_version'] | lower }}.yml"
+        - "{{ ansible_facts['distribution'] | lower }}.yml"
+        - "{{ ansible_facts['os_family'] | lower }}_{{ ansible_facts['distribution_version'] | lower }}.yml"
+        - "{{ ansible_facts['os_family'] | lower }}_{{ ansible_facts['distribution_major_version'].split('.')[0] }}.yml"
+        - "{{ ansible_facts['os_family'] | lower }}.yml"
+        - "main.yml"
+      paths:
+        - "{{ role_path }}/vars"
+  tags:
+    - always
+    - setup
+    - init
+
+# -----------------------------------------------------------------------------
+# 2. Variable Validation
+# -----------------------------------------------------------------------------
+- name: 🧪 GitHub Runner | assert | Validate role variables and requirements
+  ansible.builtin.include_tasks: assert.yml
+  run_once: true
+  tags:
+    - always
+    - validate
+    - check
+
+# -----------------------------------------------------------------------------
+# 3. System Prerequisites
+# -----------------------------------------------------------------------------
+- name: 🛠️ GitHub Runner | prerequisites | Verify system prerequisites
+  ansible.builtin.include_tasks: prerequisites.yml
+  when: >
+    github_runner_role_action in ['all', 'prerequisites'] and
+    github_runner_enabled | default(true)
+  tags:
+    - setup
+    - prerequisites
+
+# -----------------------------------------------------------------------------
+# 4. User Management
+# -----------------------------------------------------------------------------
+- name: 👤 GitHub Runner | user | Create dedicated system user
+  ansible.builtin.include_tasks: user.yml
+  when: >
+    github_runner_role_action in ['all', 'user'] and
+    github_runner_enabled | default(true) and
+    github_runner_create_user | default(true)
+  tags:
+    - setup
+    - user
+
+# -----------------------------------------------------------------------------
+# 5. Package Installation
+# -----------------------------------------------------------------------------
+- name: 📦 GitHub Runner | install | Install GitHub Runner package
+  ansible.builtin.include_tasks: install.yml
+  when: >
+    github_runner_role_action in ['all', 'install'] and
+    github_runner_enabled | default(true)
+  tags:
+    - setup
+    - install
+
+# -----------------------------------------------------------------------------
+# 6. Runner Configuration
+# -----------------------------------------------------------------------------
+- name: 🔧 GitHub Runner | configure | Configure GitHub Runner
+  ansible.builtin.include_tasks: configure.yml
+  when: >
+    github_runner_role_action in ['all', 'configure'] and
+    github_runner_enabled | default(true)
+  tags:
+    - setup
+    - configure
+
+# -----------------------------------------------------------------------------
+# 7. Service Management
+# -----------------------------------------------------------------------------
+- name: 🚀 GitHub Runner | service | Configure systemd service
+  ansible.builtin.include_tasks: service.yml
+  when: >
+    github_runner_role_action in ['all', 'service'] and
+    github_runner_enabled | default(true)
+  tags:
+    - setup
+    - service
+
+# -----------------------------------------------------------------------------
+# 8. Installation Verification
+# -----------------------------------------------------------------------------
+- name: 🧪 GitHub Runner | verify | Verify GitHub Runner installation
+  ansible.builtin.include_tasks: verify.yml
+  when: >
+    github_runner_role_action in ['all', 'configure', 'service'] and
+    github_runner_enabled | default(true) and
+    github_runner_debug | default(false)
+  tags:
+    - verify
+    - check

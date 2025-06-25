@@ -1,0 +1,34 @@
+# =============================================================================
+# GitHub Actions Runner - Systemd Service Override Configuration
+# =============================================================================
+# This override configuration file sets resource limits and additional
+# service parameters for the GitHub Actions Runner service.
+#
+# Resource Limits:
+#   - Memory: {{ github_runner_service_limits.memory_max }}
+#   - CPU Quota: {{ github_runner_service_limits.cpu_quota }}
+#   - Tasks: {{ github_runner_service_limits.tasks_max }}
+# =============================================================================
+
+[Service]
+# Resource Limits
+MemoryMax={{ github_runner_service_limits.memory_max }}
+CPUQuota={{ github_runner_service_limits.cpu_quota }}
+TasksMax={{ github_runner_service_limits.tasks_max }}
+
+# Process Management
+LimitNOFILE=65536
+LimitNPROC=32768
+
+# Security Restrictions (relaxed for .NET runtime compatibility)
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+
+# Memory and File System Protection (.NET compatible)
+MemoryDenyWriteExecute=false
+LockPersonality=false
+
+# Device Access Control (basic)
+DevicePolicy=auto

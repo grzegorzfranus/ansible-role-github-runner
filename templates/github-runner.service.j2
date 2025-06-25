@@ -1,0 +1,67 @@
+# =============================================================================
+# GitHub Actions Runner - Systemd Service Configuration
+# =============================================================================
+# This systemd service file manages the GitHub Actions Runner as a system service.
+# It ensures proper startup, shutdown, and resource management for the runner.
+# 
+# Service Details:
+#   - Runs as dedicated user: {{ github_runner_user }}
+#   - Installation directory: {{ github_runner_install_dir }}
+#   - Restart policy: {{ github_runner_service_restart_policy }}
+#   - Environment file: {{ github_runner_install_dir }}/.env
+# =============================================================================
+
+[Unit]
+Description=GitHub Actions Runner ({{ github_runner_name }})
+Documentation=https://help.github.com/en/actions/hosting-your-own-runners
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ github_runner_install_dir }}/run.sh
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart={{ github_runner_service_restart_policy }}
+RestartSec={{ github_runner_service_restart_delay }}
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+# User and Group Configuration
+User={{ github_runner_user }}
+Group={{ github_runner_user_group }}
+WorkingDirectory={{ github_runner_install_dir }}
+
+# Environment Configuration
+Environment="PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+EnvironmentFile=-{{ github_runner_install_dir }}/.env
+{% for key, value in github_runner_service_environment.items() %}
+Environment="{{ key }}={{ value }}"
+{% endfor %}
+{% for key, value in github_runner_custom_env.items() %}
+Environment="{{ key }}={{ value }}"
+{% endfor %}
+
+# Security Configuration (relaxed for .NET runtime compatibility)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=false
+ProtectHome=false
+ReadWritePaths={{ github_runner_install_dir }} {{ github_runner_work_dir }} /tmp
+
+# Network Configuration
+{% if github_runner_proxy_url %}
+Environment="HTTP_PROXY={{ github_runner_proxy_url }}"
+Environment="HTTPS_PROXY={{ github_runner_proxy_url }}"
+{% endif %}
+{% if github_runner_no_proxy %}
+Environment="NO_PROXY={{ github_runner_no_proxy }}"
+{% endif %}
+
+# Logging Configuration
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=github-runner
+
+[Install]
+WantedBy=multi-user.target
