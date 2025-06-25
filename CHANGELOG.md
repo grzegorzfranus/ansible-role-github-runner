@@ -153,4 +153,12 @@ This initial release provides a complete, production-ready solution for GitHub A
 ### Technical Details 🔍
 - **Error Resolution**: Fixed "The directory /home/github-runner/.ssh does not exist" by ensuring proper task execution order
 - **Permission Fix**: Resolved SSH public key read permissions by adding privilege escalation to file reading tasks
-- **Syntax Improvement**: Converted multi-line `when` conditions from list format to folded scalar format for better reliability 
+- **Syntax Improvement**: Converted multi-line `when` conditions from list format to folded scalar format for better reliability
+
+## [1.0.2] - 2025-06-25
+
+### Fixed 🔧
+- **Documentation Table Structure** - Removed unused "CI" column from README.md header table
+  - Cleaned up repository status table by removing empty CI column that had no badge content
+  - Updated table headers and separators to maintain proper markdown formatting
+  - Improved documentation readability and consistency 

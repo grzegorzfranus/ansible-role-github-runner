@@ -1,7 +1,7 @@
 # Ansible Role: GitHub Runner
 
-|Source|Version|CI|License|
-|------|-------|-------|-------|
+|Source|Version|License|
+|------|-------|-------|
 |[![Source Code](https://img.shields.io/badge/source-github-blue.svg)](https://github.com/grzegorzfranus/ansible-role-github-runner)|[![Version](https://img.shields.io/github/v/release/grzegorzfranus/ansible-role-github-runner)](https://github.com/grzegorzfranus/ansible-role-github-runner/releases)|[![Repository License](https://img.shields.io/badge/license-apache2.0-brightgreen.svg)](LICENSE)|
 
 This Ansible role installs and configures GitHub Actions Runner for repository and organization-level automation. It provides a comprehensive solution for self-hosted runner deployment with dedicated system user management, latest version installation, and robust systemd service configuration.
