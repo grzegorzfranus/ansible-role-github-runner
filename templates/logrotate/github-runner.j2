@@ -1,0 +1,62 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{{ ansible_managed | comment }}
+
+# Log rotation configuration for GitHub Actions Runner service
+# This template manages the rotation of GitHub Runner log files to prevent disk space issues
+# and maintain organized log archives.
+
+# Define log files to rotate
+{{ github_runner_log_dir }}/*.log {
+  # Rotation frequency (daily, weekly, monthly)
+  {{ github_runner_logrotate_options.frequency }}
+  # Number of rotated files to keep
+  rotate {{ github_runner_logrotate_options.rotate_count }}
+  {% if github_runner_logrotate_options.size is defined %}
+  # Maximum file size before rotation
+  size {{ github_runner_logrotate_options.size }}
+  {% endif %}
+  {% if github_runner_logrotate_options.missingok %}
+  # Don't error if log file is missing
+  missingok
+  {% endif %}
+  {% if github_runner_logrotate_options.notifempty %}
+  # Only rotate if log file is not empty
+  notifempty
+  {% endif %}
+  {% if github_runner_logrotate_options.compress %}
+  # Compress rotated log files
+  compress
+  {% endif %}
+  {% if github_runner_logrotate_options.delaycompress %}
+  # Delay compression by one cycle
+  delaycompress
+  {% endif %}
+  {% if github_runner_logrotate_options.copytruncate %}
+  # Copy and truncate instead of moving log files
+  copytruncate
+  {% else %}
+  # Create new log file after rotation
+  create {{ github_runner_logrotate_options.create_mode }} {{ github_runner_logrotate_options.create_owner }} {{ github_runner_logrotate_options.create_group }}
+  {% endif %}
+  {% if github_runner_logrotate_options.dateext %}
+  # Add date to name of archive log files
+  dateext
+  dateformat {{ github_runner_logrotate_options.dateformat }}
+  {% endif %}
+  {% if github_runner_logrotate_options.olddir %}
+  # Archive log directory path
+  olddir {{ github_runner_logrotate_options.olddir }}
+  {% endif %}
+  # Run postrotate scripts if required
+  sharedscripts
+  # Execute commands after log rotation
+  postrotate
+    {% if github_runner_rsyslog_enabled | default(true) %}
+    # Reload rsyslog service for log file reopening (RSyslog approach)
+    /bin/systemctl reload rsyslog.service > /dev/null 2>&1 || true
+    {% else %}
+    # Reload systemd service to reopen log files (direct file approach)
+    /bin/systemctl reload-or-restart {{ github_runner_service_name }}.service > /dev/null 2>&1 || true
+    {% endif %}
+  endscript
+} 

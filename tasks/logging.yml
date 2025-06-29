@@ -1,0 +1,233 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Logging Configuration
+# =============================================================================
+# This task file configures comprehensive logging for GitHub Actions Runner.
+# It handles systemd service logging, rsyslog integration, and log rotation
+# to provide complete operational visibility.
+#
+# Flow:
+# 1. Log Directory Management
+# 2. RSyslog Integration (Professional Approach)
+# 3. Systemd Service Override Configuration
+# 4. Log Rotation Configuration
+# 5. Backward Compatibility (Direct File Logging)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Log Directory Management
+# -----------------------------------------------------------------------------
+- name: 📁 GitHub Runner | logging | Create log directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_log_dir }}"
+    state: directory
+    owner: "{{ github_runner_log_user if github_runner_rsyslog_enabled else github_runner_user }}"
+    group: "{{ github_runner_log_group if github_runner_rsyslog_enabled else github_runner_user_group }}"
+    mode: "{{ github_runner_log_dir_mode }}"
+    recurse: true
+  when: >
+    github_runner_logging_enabled | default(false)
+  tags:
+    - setup
+    - logging
+
+- name: 📄 GitHub Runner | logging | Create initial log files
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_log_dir }}/{{ item }}"
+    state: touch
+    owner: "{{ github_runner_log_user if github_runner_rsyslog_enabled else github_runner_user }}"
+    group: "{{ github_runner_log_group if github_runner_rsyslog_enabled else github_runner_user_group }}"
+    mode: "{{ github_runner_log_file_mode }}"
+    modification_time: preserve
+    access_time: preserve
+  loop:
+    - "{{ github_runner_log_file }}"
+    - "{{ github_runner_log_error_file }}"
+  when: >
+    github_runner_logging_enabled | default(false)
+  tags:
+    - setup
+    - logging
+
+# -----------------------------------------------------------------------------
+# 2. RSyslog Integration (Professional Approach)
+# -----------------------------------------------------------------------------
+- name: 📦 GitHub Runner | logging | Install rsyslog package
+  become: true
+  ansible.builtin.package:
+    name: rsyslog
+    state: present
+  when: >
+    github_runner_logging_enabled | default(false) and
+    github_runner_rsyslog_enabled | default(true)
+  tags:
+    - setup
+    - logging
+
+- name: 📁 GitHub Runner | logging | Ensure rsyslog.d directory exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/rsyslog.d
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  when: >
+    github_runner_logging_enabled | default(false) and
+    github_runner_rsyslog_enabled | default(true)
+  tags:
+    - setup
+    - logging
+
+- name: 🔧 GitHub Runner | logging | Configure rsyslog for GitHub Runner
+  become: true
+  ansible.builtin.template:
+    src: rsyslog/github-runner.conf.j2
+    dest: "/etc/rsyslog.d/{{ github_runner_rsyslog_config_file }}"
+    mode: '0644'
+    owner: root
+    group: root
+    backup: true
+  notify: 🔄 GitHub Runner | handlers | Restart rsyslog
+  when: >
+    github_runner_logging_enabled | default(false) and
+    github_runner_rsyslog_enabled | default(true)
+  tags:
+    - setup
+    - logging
+
+- name: 🧹 GitHub Runner | logging | Remove rsyslog configuration (when disabled)
+  become: true
+  ansible.builtin.file:
+    path: "/etc/rsyslog.d/{{ github_runner_rsyslog_config_file }}"
+    state: absent
+  notify: 🔄 GitHub Runner | handlers | Restart rsyslog
+  when: >
+    github_runner_logging_enabled | default(false) and
+    not (github_runner_rsyslog_enabled | default(true))
+  tags:
+    - setup
+    - logging
+
+# -----------------------------------------------------------------------------
+# 3. Systemd Service Override Configuration
+# -----------------------------------------------------------------------------
+- name: 📁 GitHub Runner | logging | Create systemd override directory
+  become: true
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ github_runner_service_name }}.service.d"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  when: >
+    github_runner_logging_enabled | default(false) and
+    github_runner_rsyslog_enabled | default(true) and
+    ansible_service_mgr == 'systemd'
+  tags:
+    - setup
+    - logging
+
+- name: 🔧 GitHub Runner | logging | Configure systemd service override for RSyslog
+  become: true
+  ansible.builtin.blockinfile:
+    path: "/etc/systemd/system/{{ github_runner_service_name }}.service.d/logging.conf"
+    create: yes
+    mode: '0644'
+    owner: root
+    group: root
+    block: |
+      [Service]
+      StandardOutput=syslog
+      StandardError=syslog
+      SyslogIdentifier={{ github_runner_syslog_identifier }}
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - GitHub Runner RSyslog Configuration"
+  notify:
+    - reload systemd
+    - restart github runner
+  when: >
+    github_runner_logging_enabled | default(false) and
+    github_runner_rsyslog_enabled | default(true) and
+    ansible_service_mgr == 'systemd'
+  tags:
+    - setup
+    - logging
+
+- name: 🧹 GitHub Runner | logging | Remove systemd service override (when RSyslog disabled)
+  become: true
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ github_runner_service_name }}.service.d/logging.conf"
+    state: absent
+  notify:
+    - reload systemd
+    - restart github runner
+  when: >
+    github_runner_logging_enabled | default(false) and
+    not (github_runner_rsyslog_enabled | default(true)) and
+    ansible_service_mgr == 'systemd'
+  tags:
+    - setup
+    - logging
+
+# -----------------------------------------------------------------------------
+# 4. Log Rotation Configuration
+# -----------------------------------------------------------------------------
+- name: 🔄 GitHub Runner | logging | Configure logrotate
+  become: true
+  ansible.builtin.template:
+    src: logrotate/github-runner.j2
+    dest: /etc/logrotate.d/github-runner
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  when: >
+    github_runner_logging_enabled | default(false) and
+    github_runner_logrotate_options.enabled | default(true)
+  tags:
+    - setup
+    - logging
+
+# -----------------------------------------------------------------------------
+# 5. Logging Status Summary
+# -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | logging | Display logging configuration
+  ansible.builtin.debug:
+    msg:
+      - "✅ GitHub Runner logging configuration completed"
+      - "🗂️  Log directory: {{ github_runner_log_dir }}"
+      - >-
+        📄 Main log file:
+        {{ github_runner_log_dir }}/{{ github_runner_log_file }}
+      - >-
+        ❌ Error log file:
+        {{ github_runner_log_dir }}/{{ github_runner_log_error_file }}
+      - >-
+        🔧 RSyslog enabled:
+        {{ github_runner_rsyslog_enabled | default(true) }}
+      - >-
+        🏷️  Syslog identifier:
+        {{ github_runner_syslog_identifier if github_runner_rsyslog_enabled else 'N/A' }}
+      - >-
+        📋 RSyslog config:
+        {{ '/etc/rsyslog.d/' + github_runner_rsyslog_config_file if github_runner_rsyslog_enabled else 'N/A' }}
+      - >-
+        👤 Log ownership:
+        {{ (github_runner_log_user + ':' + github_runner_log_group) if github_runner_rsyslog_enabled else (github_runner_user + ':' + github_runner_user_group) }}
+      - >-
+        🔄 Logrotate enabled:
+        {{ github_runner_logrotate_options.enabled | default(true) }}
+      - >-
+        ⏰ Rotation frequency:
+        {{ github_runner_logrotate_options.frequency | default('daily') }}
+      - >-
+        📊 Rotation count:
+        {{ github_runner_logrotate_options.rotate_count | default(30) }}
+  when: >
+    github_runner_logging_enabled | default(false) and
+    github_runner_debug | default(false)
+  tags:
+    - setup
+    - logging

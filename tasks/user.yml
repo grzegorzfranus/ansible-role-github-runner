@@ -58,7 +58,7 @@
 
 - name: ✅ GitHub Runner | user | Confirm user creation
   ansible.builtin.debug:
-    msg: 
+    msg:
       - "✅ GitHub Runner user created: {{ github_runner_user }} (UID: {{ _github_runner_user_info.ansible_facts.getent_passwd[github_runner_user][1] }})"
       - "   🏠 Actual Home Dir: {{ _github_runner_user_info.ansible_facts.getent_passwd[github_runner_user][4] }}"
       - "   🏠 Expected Home Dir: {{ github_runner_user_home }}"
@@ -72,7 +72,8 @@
     name: "{{ github_runner_user }}"
     home: "{{ github_runner_user_home }}"
     move_home: true
-  when: _github_runner_user_info.ansible_facts.getent_passwd[github_runner_user][4] != github_runner_user_home
+  when: >
+    _github_runner_user_info.ansible_facts.getent_passwd[github_runner_user][4] != github_runner_user_home
   tags:
     - user
     - fix
@@ -105,7 +106,8 @@
     mode: "0440"
     backup: true
     validate: "/usr/sbin/visudo -cf %s"
-  when: github_runner_user_sudo_enabled | default(false)
+  when: >
+    github_runner_user_sudo_enabled | default(false)
   tags:
     - user
     - sudo
@@ -114,7 +116,8 @@
 - name: ✅ GitHub Runner | user | Confirm sudo configuration
   ansible.builtin.debug:
     msg: "✅ Sudo privileges configured for {{ github_runner_user }}: {{ 'NOPASSWD' if github_runner_user_sudo_nopasswd else 'with password' }}"
-  when: github_runner_user_sudo_enabled | default(false)
+  when: >
+    github_runner_user_sudo_enabled | default(false)
   tags:
     - user
     - sudo
@@ -124,7 +127,8 @@
   ansible.builtin.file:
     path: "{{ github_runner_user_sudoers_file }}"
     state: absent
-  when: not (github_runner_user_sudo_enabled | default(false))
+  when: >
+    not (github_runner_user_sudo_enabled | default(false))
   tags:
     - user
     - sudo
@@ -137,8 +141,8 @@
   ansible.builtin.set_fact:
     github_runner_user_home_verified: "/home/{{ github_runner_user }}"
   when: >
-    (github_runner_user_ssh_key | length > 0) or 
-    (github_runner_user_ssh_key_file | length > 0) or 
+    (github_runner_user_ssh_key | length > 0) or
+    (github_runner_user_ssh_key_file | length > 0) or
     github_runner_user_generate_ssh_key | default(false)
   tags:
     - user
@@ -151,8 +155,8 @@
     github_runner_user_ssh_private_key_verified: "{{ github_runner_user_home_verified | default(github_runner_user_home) }}/.ssh/id_{{ github_runner_user_ssh_key_type }}"
     github_runner_user_ssh_public_key_verified: "{{ github_runner_user_home_verified | default(github_runner_user_home) }}/.ssh/id_{{ github_runner_user_ssh_key_type }}.pub"
   when: >
-    (github_runner_user_ssh_key | length > 0) or 
-    (github_runner_user_ssh_key_file | length > 0) or 
+    (github_runner_user_ssh_key | length > 0) or
+    (github_runner_user_ssh_key_file | length > 0) or
     github_runner_user_generate_ssh_key | default(false)
   tags:
     - user
@@ -168,8 +172,8 @@
     mode: "0700"
     state: directory
   when: >
-    (github_runner_user_ssh_key | length > 0) or 
-    (github_runner_user_ssh_key_file | length > 0) or 
+    (github_runner_user_ssh_key | length > 0) or
+    (github_runner_user_ssh_key_file | length > 0) or
     github_runner_user_generate_ssh_key | default(false)
   tags:
     - user
@@ -192,7 +196,8 @@
     mode: "0600"
     state: present
     force: false
-  when: github_runner_user_generate_ssh_key | default(false)
+  when: >
+    github_runner_user_generate_ssh_key | default(false)
   register: _github_runner_ssh_key_generated
   tags:
     - user
@@ -280,7 +285,8 @@
     key: "{{ github_runner_user_ssh_key }}"
     state: present
     exclusive: false
-  when: github_runner_user_ssh_key | length > 0
+  when: >
+    github_runner_user_ssh_key | length > 0
   tags:
     - user
     - ssh
@@ -305,14 +311,12 @@
   ansible.builtin.debug:
     msg: "✅ SSH key configured for {{ github_runner_user }}"
   when: >
-    (github_runner_user_ssh_key | length > 0) or 
-    (github_runner_user_ssh_key_file | length > 0) or 
+    (github_runner_user_ssh_key | length > 0) or
+    (github_runner_user_ssh_key_file | length > 0) or
     github_runner_user_generate_ssh_key | default(false)
   tags:
     - user
     - ssh
-
-
 
 # -----------------------------------------------------------------------------
 # 6. Installation Directory Preparation

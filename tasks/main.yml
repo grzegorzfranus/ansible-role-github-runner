@@ -12,9 +12,10 @@
 # 3. Check system prerequisites
 # 4. Create dedicated user (optional)
 # 5. Install GitHub Runner
-# 6. Configure GitHub Runner
-# 7. Setup systemd service
-# 8. Verify installation (optional)
+# 6. Configure dedicated logging (optional)
+# 7. Configure GitHub Runner
+# 8. Setup systemd service
+# 9. Verify installation (optional)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -88,7 +89,20 @@
     - install
 
 # -----------------------------------------------------------------------------
-# 6. Runner Configuration
+# 6. Logging Configuration
+# -----------------------------------------------------------------------------
+- name: 📁 GitHub Runner | logging | Configure dedicated logging
+  ansible.builtin.include_tasks: logging.yml
+  when: >
+    github_runner_role_action in ['all', 'logging'] and
+    github_runner_enabled | default(true) and
+    github_runner_logging_enabled | default(false)
+  tags:
+    - setup
+    - logging
+
+# -----------------------------------------------------------------------------
+# 7. Runner Configuration
 # -----------------------------------------------------------------------------
 - name: 🔧 GitHub Runner | configure | Configure GitHub Runner
   ansible.builtin.include_tasks: configure.yml
@@ -100,7 +114,7 @@
     - configure
 
 # -----------------------------------------------------------------------------
-# 7. Service Management
+# 8. Service Management
 # -----------------------------------------------------------------------------
 - name: 🚀 GitHub Runner | service | Configure systemd service
   ansible.builtin.include_tasks: service.yml
@@ -112,7 +126,7 @@
     - service
 
 # -----------------------------------------------------------------------------
-# 8. Installation Verification
+# 9. Installation Verification
 # -----------------------------------------------------------------------------
 - name: 🧪 GitHub Runner | verify | Verify GitHub Runner installation
   ansible.builtin.include_tasks: verify.yml

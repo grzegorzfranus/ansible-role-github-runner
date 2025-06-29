@@ -123,13 +123,43 @@ This role requires root access for some tasks. Make sure that you are using a us
         github_runner_user_sudo_nopasswd: true
 ```
 
-### 4. Install required collections (for SSH key generation)
+### 4. Runner with Professional RSyslog Logging
+
+```yaml
+---
+- name: Configure GitHub Runner with Professional RSyslog Logging
+  hosts: production-runners
+  become: true
+  roles:
+    - role: grzegorzfranus.github_runner
+      vars:
+        github_runner_organization: "my-organization"
+        github_runner_access_token: "ghp_your_personal_access_token"
+        github_runner_name: "{{ ansible_hostname }}-production-runner"
+        github_runner_labels: "production,{{ ansible_distribution | lower }},self-hosted"
+        
+        # Enable professional RSyslog-based logging (recommended)
+        github_runner_logging_enabled: true
+        github_runner_rsyslog_enabled: true
+        github_runner_log_dir: "/var/log/github-runner"
+        github_runner_syslog_identifier: "github-runner"
+        
+        # Custom logrotate settings for production
+        github_runner_logrotate_options:
+          enabled: true
+          frequency: "daily"
+          rotate_count: 30
+          size: "500M"
+          compress: true
+```
+
+### 5. Install required collections (for SSH key generation)
 
 ```bash
 ansible-galaxy collection install community.crypto
 ```
 
-### 5. Run the playbook
+### 6. Run the playbook
 
 ```bash
 ansible-playbook -i inventory github-runner-setup.yml
@@ -201,7 +231,7 @@ Customize for specific requirements:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `github_runner_role_action` | Define which parts of the role to execute (Options: 'all', 'prerequisites', 'user', 'install', 'configure', 'service') | `"all"` |
+| `github_runner_role_action` | Define which parts of the role to execute (Options: 'all', 'prerequisites', 'user', 'install', 'logging', 'configure', 'service') | `"all"` |
 | `github_runner_enabled` | Enable/disable GitHub Runner installation | `true` |
 | `github_runner_debug` | Enable debug mode for troubleshooting | `false` |
 
@@ -273,6 +303,49 @@ Customize for specific requirements:
 | `github_runner_service_limits` | Resource limits dictionary | See defaults |
 | `github_runner_max_jobs` | Maximum number of concurrent jobs | `1` |
 
+### Logging Configuration
+
+#### Basic Logging Options
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `github_runner_logging_enabled` | Enable dedicated log files instead of systemd journal | `false` |
+| `github_runner_log_dir` | Log directory path | `"/var/log/github-runner"` |
+| `github_runner_log_file` | Main log file name | `"runner.log"` |
+| `github_runner_log_error_file` | Error log file name | `"runner-error.log"` |
+| `github_runner_log_dir_mode` | Log directory permissions | `"0755"` |
+| `github_runner_log_file_mode` | Log file permissions | `"0644"` |
+
+#### RSyslog Integration (Professional Approach)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `github_runner_rsyslog_enabled` | Enable RSyslog integration for professional logging | `true` |
+| `github_runner_syslog_identifier` | Syslog program identifier for filtering | `"github-runner"` |
+| `github_runner_rsyslog_config_file` | RSyslog configuration file name | `"49-github-runner.conf"` |
+| `github_runner_log_user` | Log file owner for RSyslog approach | `"syslog"` |
+| `github_runner_log_group` | Log file group for RSyslog approach | `"adm"` |
+
+#### Logrotate Options (`github_runner_logrotate_options`)
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `enabled` | Enable logrotate configuration | `true` |
+| `frequency` | Rotation frequency (daily, weekly, monthly) | `"daily"` |
+| `rotate_count` | Number of rotated files to keep | `30` |
+| `size` | Maximum file size before rotation | `"100M"` |
+| `compress` | Compress rotated logs | `true` |
+| `delaycompress` | Delay compression by one cycle | `true` |
+| `missingok` | Don't error if log file is missing | `true` |
+| `notifempty` | Only rotate if log file is not empty | `true` |
+| `copytruncate` | Use copytruncate instead of moving files | `false` |
+| `dateext` | Use date extension for rotated files | `false` |
+| `dateformat` | Date format for rotated files | `".%Y-%m-%d"` |
+| `olddir` | Directory to move old log files to | `""` |
+| `create_mode` | File permissions for newly created logs | `"0644"` |
+| `create_owner` | Owner for newly created log files | `github_runner_user` |
+| `create_group` | Group for newly created log files | `github_runner_user_group` |
+
 ### Security Settings
 
 | Variable | Description | Default |
@@ -327,14 +400,28 @@ curl -H "Authorization: token YOUR_TOKEN" \
 ### Check Logs
 
 ```bash
-# View service logs
+# View service logs (systemd journal - always available)
 sudo journalctl -u actions.runner.* -f
+
+# View dedicated log files (when logging_enabled: true)
+sudo tail -f /var/log/github-runner/runner.log
+sudo tail -f /var/log/github-runner/runner-error.log
+
+# Check RSyslog status and configuration (when rsyslog_enabled: true)
+sudo systemctl status rsyslog
+sudo cat /etc/rsyslog.d/49-github-runner.conf
 
 # Check runner diagnostics
 ls -la /opt/actions-runner/_diag/
 
 # Monitor runner activity
 tail -f /opt/actions-runner/_diag/*.log
+
+# Check logrotate status
+sudo logrotate -d /etc/logrotate.d/github-runner
+
+# Verify RSyslog is processing GitHub Runner logs
+sudo grep "github-runner" /var/log/syslog | tail -5
 ```
 
 ## 🛡️ Security Features
@@ -436,6 +523,7 @@ ansible-role-github-runner/
 │   ├── prerequisites.yml    # System requirements and dependency installation
 │   ├── user.yml             # User and group management
 │   ├── install.yml          # GitHub Runner installation
+│   ├── logging.yml          # Dedicated logging configuration and logrotate setup
 │   ├── configure.yml        # Runner registration and configuration
 │   ├── service.yml          # Systemd service management
 │   └── verify.yml           # Installation verification and health checks
@@ -443,7 +531,11 @@ ansible-role-github-runner/
 │   ├── github-runner.service.j2    # Systemd service configuration
 │   ├── service-override.conf.j2    # Service resource limits
 │   ├── runner-environment.j2       # Environment variables
-│   └── sudoers.j2                  # Sudo configuration
+│   ├── sudoers.j2                  # Sudo configuration
+│   ├── rsyslog/
+│   │   └── github-runner.conf.j2   # RSyslog configuration for professional logging
+│   └── logrotate/
+│       └── github-runner.j2        # Logrotate configuration for log management
 ├── vars/
 │   └── main.yml             # Internal role variables and constants
 ├── CHANGELOG.md             # Version history and changes
@@ -461,11 +553,12 @@ ansible-role-github-runner/
 - `prerequisites` - System requirements verification
 - `user` - User management tasks
 - `install` - Package installation tasks
+- `logging` - Dedicated logging configuration and logrotate setup
 - `configure` - Runner configuration tasks
 - `service` - Service management tasks
 - `verify` - Verification and health check tasks
 
-## Example Playbook
+## 📖 Example Playbook
 
 ```yaml
 ---
@@ -508,6 +601,13 @@ ansible-role-github-runner/
           NODE_VERSION: "18"
           PYTHON_VERSION: "3.11"
           DOCKER_BUILDKIT: "1"
+        
+        # Dedicated Logging Configuration
+        github_runner_logging_enabled: true
+        github_runner_log_dir: "/var/log/github-runner"
+        github_runner_logrotate_options:
+          frequency: "daily"
+          rotate_count: 30
 
 # Example of using the role with different settings for different host groups
 - name: Configure Repository Runners

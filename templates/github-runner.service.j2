@@ -59,9 +59,16 @@ Environment="NO_PROXY={{ github_runner_no_proxy }}"
 {% endif %}
 
 # Logging Configuration
+{% if github_runner_logging_enabled | default(false) and not github_runner_rsyslog_enabled | default(true) %}
+# Direct file logging (legacy approach)
+StandardOutput=append:{{ github_runner_log_dir }}/{{ github_runner_log_file }}
+StandardError=append:{{ github_runner_log_dir }}/{{ github_runner_log_error_file }}
+{% else %}
+# Standard output to systemd journal (RSyslog will handle dedicated files)
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=github-runner
+{% endif %}
+SyslogIdentifier={{ github_runner_syslog_identifier }}
 
 [Install]
 WantedBy=multi-user.target

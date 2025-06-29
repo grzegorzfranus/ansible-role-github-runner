@@ -1,0 +1,19 @@
+# ignore visual studio code things, and intelliJ
+.vscode
+.idea
+.cursor
+
+# ignore Python Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ignore cache
+.cache
+
+# ignore Mac
+.DS_Store

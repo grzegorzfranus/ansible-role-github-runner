@@ -5,6 +5,230 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2025-06-29
+
+### Added ✅
+- **Professional RSyslog Integration** - Implemented enterprise-grade logging with RSyslog support
+  - Added RSyslog package installation and configuration
+  - Created RSyslog template (`rsyslog/github-runner.conf.j2`) for GitHub Runner log routing
+  - Implemented systemd service override for SyslogIdentifier configuration
+  - Added automatic RSyslog service restart handlers
+  - Provides professional logging approach following collection standards
+
+- **Enhanced Logging Architecture** - Comprehensive logging system with multiple approaches
+  - **RSyslog approach (recommended)**: Service → systemd journal → RSyslog → dedicated files
+  - **Legacy approach**: Service → direct file output (for backward compatibility)
+  - Automatic log ownership management (syslog:adm for RSyslog, github-runner:github-runner for legacy)
+  - Intelligent logrotate service restart (rsyslog reload for RSyslog approach, service restart for legacy)
+
+### Configuration Variables 📊
+- **RSyslog Integration**:
+  - `github_runner_rsyslog_enabled` - Enable RSyslog integration (default: `true`)
+  - `github_runner_syslog_identifier` - Syslog program identifier (default: `"github-runner"`)
+  - `github_runner_rsyslog_config_file` - RSyslog config file name (default: `"49-github-runner.conf"`)
+  - `github_runner_log_user` - Log file owner for RSyslog (default: `"syslog"`)
+  - `github_runner_log_group` - Log file group for RSyslog (default: `"adm"`)
+
+### Enhanced Features 🚀
+- **Intelligent Service Configuration** - Systemd service template automatically adapts to logging approach
+  - RSyslog enabled: StandardOutput/StandardError → journal (RSyslog handles file routing)
+  - RSyslog disabled: StandardOutput/StandardError → direct file append (legacy mode)
+  - Configurable SyslogIdentifier based on `github_runner_syslog_identifier` variable
+
+- **Professional Log Management** - Following enterprise logging patterns
+  - RSyslog configuration follows tailscale/wireguard/nftables pattern from collection
+  - Log filtering and routing based on program name
+  - Centralized log management capability with RSyslog
+  - Structured logging support for integration with log analysis tools
+
+### Technical Implementation 🔧
+- **Systemd Service Override** - Automatic configuration for RSyslog integration
+  - Creates `/etc/systemd/system/[service].service.d/logging.conf` when RSyslog enabled
+  - Sets StandardOutput=syslog, StandardError=syslog, SyslogIdentifier=[identifier]
+  - Automatic cleanup when RSyslog is disabled
+  - Proper daemon-reload and service restart handling
+
+- **Enhanced Tasks Structure** - Updated logging.yml with comprehensive flow
+  - Log directory and file creation with dynamic ownership
+  - RSyslog package installation and configuration
+  - Systemd service override management
+  - Logrotate configuration with approach-specific service restart
+  - Enhanced status reporting with RSyslog configuration details
+
+### Documentation Updates 📚
+- **Updated README.md** - Comprehensive RSyslog documentation
+  - Added "RSyslog Integration (Professional Approach)" section to variables
+  - Updated "Check Logs" section with RSyslog verification commands
+  - Enhanced file structure documentation with RSyslog template
+  - Updated usage examples with professional logging configuration
+
+### Backward Compatibility ✅
+- **No Breaking Changes** - Full backward compatibility maintained
+  - RSyslog enabled by default but gracefully handles missing packages
+  - Legacy direct file logging preserved when RSyslog disabled
+  - Existing configurations continue to work without modification
+  - Automatic migration to professional logging approach
+
+### Quality Assurance 🧪
+- **Enhanced Error Handling** - Robust configuration with fallback mechanisms
+  - Conditional RSyslog configuration based on availability
+  - Automatic cleanup when features are disabled
+  - Proper service restart coordination between systemd and rsyslog
+  - Enhanced debug output for troubleshooting
+
+This major enhancement brings enterprise-grade logging capabilities to the GitHub Runner role, following the established patterns from other roles in the collection while maintaining full backward compatibility.
+
+## [1.0.4] - 2025-06-29
+
+### Fixed 🔧
+- **Logrotate Size Option** - Fixed "dict object has no attribute 'size'" error in logrotate template
+  - Made the `size` option conditional in logrotate template (`{% if github_runner_logrotate_options.size is defined %}`)
+  - Commented out the default `size: "100M"` option in `defaults/main.yml` to allow users to opt-in
+  - Users can now exclude the size-based rotation entirely or add it back if needed
+  - Resolves issue where logrotate would fail when size attribute was not properly defined
+
+### Changed 📝
+- **Logrotate Configuration** - Size-based log rotation is now optional
+  - Default behavior: logs rotate based on frequency (daily) and count (30) only
+  - To enable size-based rotation: add `size: "100M"` to your `github_runner_logrotate_options` configuration
+  - This change provides more flexibility for different log management preferences
+
+## [1.0.3] - 2025-06-29
+
+### Added ✅
+- **Dedicated Logging Support** - Added comprehensive logging functionality to redirect GitHub Runner logs to dedicated files
+  - New logging task file (`logging.yml`) for log directory and file management
+  - Configurable log directory path with default `/var/log/github-runner`
+  - Separate log files for standard output (`runner.log`) and errors (`runner-error.log`)
+  - Automatic log directory and file creation with proper ownership and permissions
+  - Integration with systemd service to redirect output from journal to files when enabled
+  - Conditional logging configuration - defaults to systemd journal logging for backward compatibility
+
+- **Logrotate Integration** - Comprehensive log rotation management to prevent disk space issues
+  - Automatic logrotate configuration generation (`/etc/logrotate.d/github-runner`)
+  - Configurable rotation frequency (daily, weekly, monthly) with daily default
+  - Configurable retention count (default 30 rotations)
+  - Maximum file size rotation trigger (default 100M)
+  - Compression support with delay compression option
+  - Proper file permissions and ownership after rotation
+  - Service reload integration for log file reopening
+
+### Configuration Variables 📊
+- **Logging Control**:
+  - `github_runner_logging_enabled` - Enable/disable dedicated logging (default: `false`)
+  - `github_runner_log_dir` - Log directory path (default: `/var/log/github-runner`)
+  - `github_runner_log_file` - Main log file name (default: `runner.log`)
+  - `github_runner_log_error_file` - Error log file name (default: `runner-error.log`)
+  - `github_runner_log_dir_mode` - Log directory permissions (default: `0755`)
+  - `github_runner_log_file_mode` - Log file permissions (default: `0644`)
+
+- **Logrotate Configuration** (`github_runner_logrotate_options` dictionary):
+  - `enabled` - Enable logrotate configuration (default: `true`)
+  - `frequency` - Rotation frequency (default: `daily`)
+  - `rotate_count` - Number of rotated files to keep (default: `30`)
+  - `size` - Maximum file size before rotation (default: `100M`)
+  - `compress` - Compress rotated logs (default: `true`)
+  - `delaycompress` - Delay compression by one cycle (default: `true`)
+  - `missingok` - Don't error if log file is missing (default: `true`)
+  - `notifempty` - Only rotate if log file is not empty (default: `true`)
+  - `copytruncate` - Use copytruncate instead of moving files (default: `false`)
+  - `dateext` - Use date extension for rotated files (default: `false`)
+  - `dateformat` - Date format for rotated files (default: `.%Y-%m-%d`)
+  - `olddir` - Directory to move old log files to (default: `""`)
+  - `create_mode` - File permissions for newly created logs (default: `0644`)
+  - `create_owner` - Owner for newly created log files (default: `github_runner_user`)
+  - `create_group` - Group for newly created log files (default: `github_runner_user_group`)
+
+### Enhanced Features 🚀
+- **Task Organization** - Added new `logging` tag and task group for selective execution
+- **Role Action Support** - Extended `github_runner_role_action` to include `logging` option
+- **Template System** - New logrotate template (`logrotate/github-runner.j2`) for log management
+- **Service Integration** - Updated systemd service template to support both journal and file logging modes
+- **Debug Output** - Enhanced debug mode with logging configuration status display
+- **Backward Compatibility** - Logging is disabled by default to maintain existing behavior
+
+### Technical Implementation 🔧
+- **Conditional Output Redirection** - Systemd service uses `append:` directive for log files when enabled
+- **Permission Management** - Proper file and directory ownership with configurable permissions
+- **Service Reload** - Logrotate integration with service reload for log file reopening
+- **Error Handling** - Comprehensive error handling in logrotate configuration
+- **Security** - Log rotation runs under GitHub Runner user context for security
+
+### Usage Examples 💡
+```yaml
+# Enable dedicated logging
+github_runner_logging_enabled: true
+github_runner_log_dir: "/var/log/github-runner"
+
+# Custom logrotate settings
+github_runner_logrotate_options:
+  enabled: true
+  frequency: "weekly"
+  rotate_count: 52
+  size: "500M"
+  compress: true
+  dateext: true
+```
+
+This enhancement addresses syslog noise by providing dedicated log file management while maintaining full backward compatibility with existing systemd journal logging.
+
+### Changed 📝
+- **Logrotate Variable Structure** - Restructured logrotate configuration variables into a single `github_runner_logrotate_options` dictionary
+  - Follows consistent pattern from other roles in the collection (tailscale, chrony)
+  - Improved template structure with proper jinja2 headers and conditional blocks
+  - Enhanced configurability with additional options like `missingok`, `notifempty`, `dateext`, etc.
+  - **Breaking Change**: Individual logrotate variables consolidated into structured format
+
+### Migration Guide 🔄
+**Old format:**
+```yaml
+github_runner_logrotate_enabled: true
+github_runner_logrotate_frequency: "daily"
+github_runner_logrotate_rotate_count: 30
+github_runner_logrotate_max_size: "100M"
+```
+
+**New format:**
+```yaml
+github_runner_logrotate_options:
+  enabled: true
+  frequency: "daily"
+  rotate_count: 30
+  size: "100M"
+```
+
+## [1.0.2] - 2025-06-25
+
+### Fixed 🔧
+- **Documentation Table Structure** - Removed unused "CI" column from README.md header table
+  - Cleaned up repository status table by removing empty CI column that had no badge content
+  - Updated table headers and separators to maintain proper markdown formatting
+  - Improved documentation readability and consistency
+
+## [1.0.1] - 2025-06-25
+
+### Fixed 🔧
+- **SSH Key Generation Directory Creation** - Fixed issue where SSH directory was not created before generating SSH keys
+  - Reordered SSH tasks to set up verified paths before directory creation
+  - Fixed `when` conditions syntax using proper Ansible YAML folded scalar format (`>`)
+  - Added parentheses for clarity in complex boolean conditions
+- **SSH Key File Permissions** - Fixed "file is not readable" error when reading generated SSH public key
+  - Added `become: true` to SSH public key reading task for proper file access permissions
+- **SSH Configuration Validation** - Improved SSH key configuration detection in user summary
+  - Updated SSH key status logic to properly handle all SSH configuration methods (import, file, generation)
+  - Enhanced debug output to show both original and verified SSH directory paths
+
+### Changed 📝
+- **SSH Task Organization** - Improved task flow and conditional execution for SSH key management
+  - Consolidated SSH path verification into shared setup tasks
+  - Simplified conditional logic across all SSH-related tasks
+  - Enhanced debugging output with verified vs original path comparison
+
+### Technical Details 🔍
+- **Error Resolution**: Fixed "The directory /home/github-runner/.ssh does not exist" by ensuring proper task execution order
+- **Permission Fix**: Resolved SSH public key read permissions by adding privilege escalation to file reading tasks
+- **Syntax Improvement**: Converted multi-line `when` conditions from list format to folded scalar format for better reliability
+
 ## [1.0.0] - 2025-06-25
 
 ### Added ✅
@@ -130,35 +354,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Proxy Support** - HTTP proxy configuration for enterprise environments
 
 This initial release provides a complete, production-ready solution for GitHub Actions Runner deployment with comprehensive security, flexibility, and reliability features.
-
-## [1.0.1] - 2025-06-25
-
-### Fixed 🔧
-- **SSH Key Generation Directory Creation** - Fixed issue where SSH directory was not created before generating SSH keys
-  - Reordered SSH tasks to set up verified paths before directory creation
-  - Fixed `when` conditions syntax using proper Ansible YAML folded scalar format (`>`)
-  - Added parentheses for clarity in complex boolean conditions
-- **SSH Key File Permissions** - Fixed "file is not readable" error when reading generated SSH public key
-  - Added `become: true` to SSH public key reading task for proper file access permissions
-- **SSH Configuration Validation** - Improved SSH key configuration detection in user summary
-  - Updated SSH key status logic to properly handle all SSH configuration methods (import, file, generation)
-  - Enhanced debug output to show both original and verified SSH directory paths
-
-### Changed 📝
-- **SSH Task Organization** - Improved task flow and conditional execution for SSH key management
-  - Consolidated SSH path verification into shared setup tasks
-  - Simplified conditional logic across all SSH-related tasks
-  - Enhanced debugging output with verified vs original path comparison
-
-### Technical Details 🔍
-- **Error Resolution**: Fixed "The directory /home/github-runner/.ssh does not exist" by ensuring proper task execution order
-- **Permission Fix**: Resolved SSH public key read permissions by adding privilege escalation to file reading tasks
-- **Syntax Improvement**: Converted multi-line `when` conditions from list format to folded scalar format for better reliability
-
-## [1.0.2] - 2025-06-25
-
-### Fixed 🔧
-- **Documentation Table Structure** - Removed unused "CI" column from README.md header table
-  - Cleaned up repository status table by removing empty CI column that had no badge content
-  - Updated table headers and separators to maintain proper markdown formatting
-  - Improved documentation readability and consistency 

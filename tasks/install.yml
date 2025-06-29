@@ -28,12 +28,15 @@
 
 - name: 🔍 GitHub Runner | install | Check current runner version
   ansible.builtin.shell: |
+    set -o pipefail
     if [ -f "{{ github_runner_install_dir }}/bin/Runner.Listener" ]; then
       cd "{{ github_runner_install_dir }}"
       ./bin/Runner.Listener --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
     else
       echo "not_installed"
     fi
+  args:
+    executable: /bin/bash
   register: _github_runner_current_version
   changed_when: false
   check_mode: false
@@ -43,7 +46,7 @@
 
 - name: 📊 GitHub Runner | install | Display current installation status
   ansible.builtin.debug:
-    msg: 
+    msg:
       - "📊 Current GitHub Runner Status:"
       - "   📦 Installed: {{ 'Yes' if _github_runner_existing_installation.stat.exists else 'No' }}"
       - "   🏷️ Version: {{ _github_runner_current_version.stdout if _github_runner_current_version.stdout != 'not_installed' else 'N/A' }}"
@@ -63,7 +66,8 @@
     validate_certs: "{{ github_runner_verify_ssl }}"
     headers: "{{ github_runner_api_headers }}"
   register: _github_runner_latest_release
-  when: github_runner_version == "latest"
+  when: >
+    github_runner_version == "latest"
   tags:
     - install
     - version
@@ -115,7 +119,8 @@
     path: "{{ github_runner_temp_dir }}"
     state: directory
     mode: "0755"
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - download
@@ -124,7 +129,8 @@
   ansible.builtin.set_fact:
     _github_runner_download_url: "{{ github_runner_download_base_url }}/{{ _github_runner_target_version }}/{{ github_runner_package_name }}-{{ _github_runner_target_version.lstrip('v') }}.tar.gz"
     _github_runner_package_file: "{{ github_runner_temp_dir }}/{{ github_runner_package_name }}-{{ _github_runner_target_version.lstrip('v') }}.tar.gz"
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - download
@@ -137,7 +143,8 @@
       - "   📁 File: {{ _github_runner_package_file }}"
       - "   🏗️ Architecture: {{ github_runner_architecture }}"
       - "   🐧 OS: {{ github_runner_os }}"
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - download
@@ -151,7 +158,8 @@
     timeout: "{{ github_runner_download_timeout }}"
     validate_certs: "{{ github_runner_verify_ssl }}"
   register: _github_runner_download_result
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - download
@@ -161,7 +169,8 @@
   ansible.builtin.stat:
     path: "{{ _github_runner_package_file }}"
   register: _github_runner_package_stat
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - verify
@@ -173,7 +182,8 @@
       - _github_runner_package_stat.stat.size > 1000000  # At least 1MB
     fail_msg: "❌ Downloaded package is invalid or corrupted"
     success_msg: "✅ Package downloaded successfully ({{ (_github_runner_package_stat.stat.size / 1024 / 1024) | round(1) }}MB)"
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - verify
@@ -206,6 +216,7 @@
     _github_runner_existing_installation.stat.exists and
     not github_runner_force_reinstall
   failed_when: false
+  changed_when: true
   tags:
     - install
     - backup
@@ -230,7 +241,8 @@
     group: "{{ github_runner_user_group }}"
     mode: "{{ github_runner_install_dir_mode }}"
     state: directory
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - directories
@@ -244,7 +256,8 @@
     group: "{{ github_runner_user_group }}"
     remote_src: true
     creates: "{{ github_runner_config_script }}"
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - extract
@@ -259,7 +272,8 @@
     owner: "{{ github_runner_user }}"
     group: "{{ github_runner_user_group }}"
     recurse: true
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - permissions
@@ -274,7 +288,8 @@
     - "{{ github_runner_run_script }}"
     - "{{ github_runner_install_dir }}/bin/Runner.Listener"
     - "{{ github_runner_install_dir }}/bin/Runner.Worker"
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - permissions
@@ -290,7 +305,8 @@
     - "{{ github_runner_config_script }}"
     - "{{ github_runner_run_script }}"
     - "{{ github_runner_install_dir }}/bin/Runner.Listener"
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - verify
@@ -303,18 +319,25 @@
     fail_msg: "❌ Required file {{ item.item }} is missing or not executable"
     success_msg: "✅ Required file {{ item.item }} is present and executable"
   loop: "{{ _github_runner_installation_files.results }}"
-  when: _github_runner_needs_installation | bool
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - verify
 
 - name: 🏷️ GitHub Runner | install | Get installed version
   ansible.builtin.shell: |
+    set -o pipefail
     cd "{{ github_runner_install_dir }}"
-    ./bin/Runner.Listener --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
+    sudo -u "{{ github_runner_user }}" ./bin/Runner.Listener --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
+  args:
+    executable: /bin/bash
   register: _github_runner_installed_version
+  become: true
   changed_when: false
-  when: _github_runner_needs_installation | bool
+  check_mode: false
+  when: >
+    _github_runner_needs_installation | bool
   tags:
     - install
     - verify

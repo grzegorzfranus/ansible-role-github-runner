@@ -19,7 +19,10 @@
 # -----------------------------------------------------------------------------
 - name: 🔍 GitHub Runner | prerequisites | Check available disk space
   ansible.builtin.shell: |
+    set -o pipefail
     df {{ github_runner_install_dir | dirname }} --output=avail --block-size=1G | tail -n1 | tr -d ' '
+  args:
+    executable: /bin/bash
   register: _github_runner_available_disk_space
   changed_when: false
   check_mode: false
@@ -39,7 +42,10 @@
 
 - name: 🔍 GitHub Runner | prerequisites | Check available memory
   ansible.builtin.shell: |
+    set -o pipefail
     free -m | awk 'NR==2{printf "%d", $7}'
+  args:
+    executable: /bin/bash
   register: _github_runner_available_memory
   changed_when: false
   check_mode: false
@@ -65,16 +71,18 @@
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
-  when: ansible_facts['os_family'] == 'Debian'
+  when: >
+    ansible_facts['os_family'] == 'Debian'
   tags:
     - install
     - packages
 
 - name: 🔄 GitHub Runner | prerequisites | Update package cache (RedHat/CentOS)
   become: true
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     update_cache: true
-  when: ansible_facts['os_family'] == 'RedHat'
+  when: >
+    ansible_facts['os_family'] == 'RedHat'
   tags:
     - install
     - packages
@@ -88,22 +96,22 @@
     name: "{{ github_runner_dependencies }}"
     state: present
     update_cache: false
-  when: ansible_facts['os_family'] == 'Debian'
+  when: >
+    ansible_facts['os_family'] == 'Debian'
   tags:
     - install
     - packages
 
 - name: 📦 GitHub Runner | prerequisites | Install required dependencies (RedHat/CentOS)
   become: true
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name: "{{ github_runner_dependencies }}"
     state: present
-  when: ansible_facts['os_family'] == 'RedHat'
+  when: >
+    ansible_facts['os_family'] == 'RedHat'
   tags:
     - install
     - packages
-
-
 
 # -----------------------------------------------------------------------------
 # 4. System Service Verification
@@ -137,7 +145,8 @@
     timeout: "{{ github_runner_api_timeout }}"
     validate_certs: "{{ github_runner_verify_ssl }}"
   register: _github_runner_api_connectivity
-  when: github_runner_access_token | length > 0
+  when: >
+    github_runner_access_token | length > 0
   tags:
     - check
     - connectivity
@@ -182,7 +191,8 @@
   register: _github_runner_sudo_check
   changed_when: false
   check_mode: false
-  when: github_runner_user_sudo_enabled | default(false)
+  when: >
+    github_runner_user_sudo_enabled | default(false)
   tags:
     - check
     - security

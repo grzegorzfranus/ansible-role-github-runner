@@ -1,0 +1,27 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{{ ansible_managed | comment }}
+
+# =============================================================================
+# GitHub Runner RSyslog Configuration
+# =============================================================================
+# This configuration file sets up specialized logging for GitHub Actions Runner.
+# It configures rsyslog to:
+#
+# 1. Capture all log messages from the GitHub Runner service
+# 2. Redirect them to dedicated log files for easier monitoring and analysis  
+# 3. Stop processing these messages to avoid duplicate logging in syslog
+#
+# The configuration handles both standard output and error output from the
+# GitHub Runner service, providing comprehensive logging coverage.
+# =============================================================================
+
+# GitHub Runner standard logs
+# Match logs by syslog identifier and redirect to the main log file
+:programname, isequal, "{{ github_runner_syslog_identifier }}" {{ github_runner_log_dir }}/{{ github_runner_log_file }}
+
+# GitHub Runner error logs  
+# Filter error-level messages to a separate error log file
+:programname, isequal, "{{ github_runner_syslog_identifier }}" :omfile:${{ github_runner_log_dir }}/{{ github_runner_log_error_file }}
+
+# Stop processing these logs further to prevent duplication in main syslog
+& stop

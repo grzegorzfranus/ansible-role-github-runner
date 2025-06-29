@@ -110,7 +110,8 @@
 - name: ✅ GitHub Runner | service | Verify service startup
   ansible.builtin.debug:
     msg: "✅ GitHub Runner service {{ _github_runner_service_result.state }}: {{ github_runner_service_name }}"
-  when: _github_runner_service_result is succeeded
+  when: >
+    _github_runner_service_result is succeeded
   tags:
     - service
     - verify
@@ -145,7 +146,8 @@
     timeout: 30
   delegate_to: localhost
   run_once: true
-  when: github_runner_service_state == "started"
+  when: >
+    github_runner_service_state == "started"
   tags:
     - service
     - wait
@@ -154,7 +156,8 @@
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
   register: _github_runner_service_health
-  when: github_runner_service_state == "started"
+  when: >
+    github_runner_service_state == "started"
   tags:
     - service
     - health
@@ -166,7 +169,8 @@
       - _github_runner_service_health.status.SubState == "running"
     fail_msg: "❌ GitHub Runner service is not running properly. State: {{ _github_runner_service_health.status.ActiveState }}/{{ _github_runner_service_health.status.SubState }}"
     success_msg: "✅ GitHub Runner service is running and healthy"
-  when: github_runner_service_state == "started"
+  when: >
+    github_runner_service_state == "started"
   tags:
     - service
     - health
@@ -176,12 +180,16 @@
 # -----------------------------------------------------------------------------
 - name: 🔍 GitHub Runner | service | Get runner process information
   ansible.builtin.shell: |
+    set -o pipefail
     ps aux | grep -E "(Runner\.(Listener|Worker))" | grep -v grep | head -5
+  args:
+    executable: /bin/bash
   register: _github_runner_processes
   changed_when: false
   check_mode: false
   failed_when: false
-  when: github_runner_service_state == "started"
+  when: >
+    github_runner_service_state == "started"
   tags:
     - service
     - processes

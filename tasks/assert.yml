@@ -123,7 +123,8 @@
         github_runner_repository_url | length == 0
     fail_msg: "❌ Invalid repository URL format '{{ github_runner_repository_url | default('undefined') }}'. Must be 'owner/repo' or 'https://github.com/owner/repo'"
     success_msg: "✅ Repository URL format is valid: {{ github_runner_repository_url | default('(organization mode)') }}"
-  when: github_runner_repository_url | length > 0
+  when: >
+    github_runner_repository_url | length > 0
 
 - name: 🧪 GitHub Runner | assert | Validate organization name
   ansible.builtin.assert:

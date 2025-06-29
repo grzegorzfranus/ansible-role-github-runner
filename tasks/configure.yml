@@ -135,6 +135,7 @@
     - check
 
 - name: 🔍 GitHub Runner | configure | Check current runner registration
+  become: true
   ansible.builtin.shell: |
     if [ -f "{{ github_runner_runner_config_file }}" ]; then
       grep -oP '"agentName":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo "unknown"
@@ -142,7 +143,6 @@
       echo "not_configured"
     fi
   register: _github_runner_current_name
-  become: true
   changed_when: false
   check_mode: false
   tags:
@@ -164,15 +164,16 @@
 # 4. Runner Removal (if replacing)
 # -----------------------------------------------------------------------------
 - name: 🗑️ GitHub Runner | configure | Remove existing runner configuration
+  become: true
   ansible.builtin.shell: |
     cd "{{ github_runner_install_dir }}"
     sudo -u "{{ github_runner_user }}" ./config.sh remove --unattended --token "{{ _github_runner_registration_token }}"
-  become: true
   when: >
     _github_runner_existing_config.stat.exists and
     github_runner_replace | bool
   no_log: true
   failed_when: false
+  changed_when: false
   tags:
     - configure
     - remove
@@ -193,6 +194,7 @@
     - check
 
 - name: 🔧 GitHub Runner | configure | Configure GitHub Runner
+  become: true
   ansible.builtin.shell: |
     cd "{{ github_runner_install_dir }}"
     sudo -u "{{ github_runner_user }}" \
@@ -208,10 +210,11 @@
       {{ '--ephemeral' if github_runner_ephemeral else '' }} \
       {{ '--replace' if github_runner_replace else '' }} \
       {{ '--runnergroup "' + github_runner_group + '"' if github_runner_group else '' }}
-  become: true
-  when: _github_runner_needs_configuration | bool
+  when: >
+    _github_runner_needs_configuration | bool
   no_log: true
   register: _github_runner_config_result
+  changed_when: _github_runner_config_result.rc == 0
   tags:
     - configure
     - register
@@ -283,6 +286,7 @@
 # 8. Extract Runner Information
 # -----------------------------------------------------------------------------
 - name: 🔍 GitHub Runner | configure | Extract runner configuration details
+  become: true
   ansible.builtin.shell: |
     if [ -f "{{ github_runner_runner_config_file }}" ]; then
       echo "Agent Name: $(grep -oP '"agentName":\s*"\K[^"]*' "{{ github_runner_runner_config_file }}" 2>/dev/null || echo 'unknown')"
@@ -293,7 +297,6 @@
       echo "Configuration file not found"
     fi
   register: _github_runner_config_details
-  become: true
   changed_when: false
   tags:
     - configure
@@ -323,7 +326,8 @@
 - name: 📋 GitHub Runner | configure | Display runner details
   ansible.builtin.debug:
     msg: "{{ _github_runner_config_details.stdout_lines }}"
-  when: _github_runner_config_details.stdout_lines is defined
+  when: >
+    _github_runner_config_details.stdout_lines is defined
   tags:
     - configure
     - info

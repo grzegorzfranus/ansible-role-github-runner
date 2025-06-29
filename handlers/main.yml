@@ -45,3 +45,9 @@
     state: started
     enabled: "{{ github_runner_service_enabled }}"
   listen: "start github runner"
+
+- name: 🔄 GitHub Runner | handlers | Restart rsyslog
+  become: true
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted

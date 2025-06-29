@@ -20,7 +20,8 @@
 # -----------------------------------------------------------------------------
 # Role execution control and basic configuration.
 
-# Define which parts of the role to execute (Options: 'all', 'install', 'configure', 'service', 'user')
+# Define which parts of the role to execute
+# Options: 'all', 'prerequisites', 'user', 'install', 'logging', 'configure', 'service'
 github_runner_role_action: "all"
 
 # Enable/disable GitHub Runner installation
@@ -38,7 +39,10 @@ github_runner_debug: false
 github_runner_version: "latest"
 
 # GitHub Runner architecture (auto-detected based on system)
-github_runner_architecture: "{{ 'x64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else 'x64' }}"
+github_runner_architecture: >-
+  {{ 'x64' if ansible_architecture == 'x86_64'
+  else 'arm64' if ansible_architecture == 'aarch64'
+  else 'x64' }}
 
 # GitHub Runner operating system
 github_runner_os: "linux"
@@ -87,7 +91,8 @@ github_runner_token_direct: ""
 # Runner configuration
 github_runner_name: "{{ ansible_hostname }}"
 github_runner_group: ""  # Runner group (for organization runners)
-github_runner_labels: "{{ ansible_distribution | lower }}-{{ ansible_distribution_version }},self-hosted,{{ ansible_architecture }}"
+github_runner_labels: >-
+  {{ ansible_distribution | lower }}-{{ ansible_distribution_version }},self-hosted,{{ ansible_architecture }}
 github_runner_work_dir: "{{ github_runner_install_dir }}/_work"
 
 # Runner behavior
@@ -117,8 +122,6 @@ github_runner_user_sudo_enabled: false
 github_runner_user_sudo_nopasswd: true
 github_runner_user_sudo_commands: "ALL"  # Can be specific commands or "ALL"
 
-
-
 # SSH key management (optional)
 github_runner_user_ssh_key: ""  # Public SSH key content
 github_runner_user_ssh_key_file: ""  # Path to SSH key file
@@ -127,7 +130,9 @@ github_runner_user_ssh_key_file: ""  # Path to SSH key file
 github_runner_user_generate_ssh_key: false  # Generate SSH key pair for deployment
 github_runner_user_ssh_key_type: "ed25519"  # SSH key type (rsa, ed25519, ecdsa)
 github_runner_user_ssh_key_bits: 4096       # Key bits (for RSA keys)
-github_runner_user_ssh_key_comment: "{{ github_runner_user }}@{{ ansible_hostname }}-github-runner"  # SSH key comment
+# SSH key comment
+github_runner_user_ssh_key_comment: >-
+  {{ github_runner_user }}@{{ ansible_hostname }}-github-runner
 
 # -----------------------------------------------------------------------------
 # 5. GitHub Runner Service Management
@@ -137,7 +142,10 @@ github_runner_user_ssh_key_comment: "{{ github_runner_user }}@{{ ansible_hostnam
 # Service configuration
 github_runner_service_enabled: true
 github_runner_service_state: "started"
-github_runner_service_name: "actions.runner.{{ github_runner_organization if github_runner_organization else github_runner_repository_url.split('/')[-1] if github_runner_repository_url else 'default' }}.{{ github_runner_name }}"
+github_runner_service_name: >-
+  actions.runner.{{ github_runner_organization if github_runner_organization
+  else github_runner_repository_url.split('/')[-1] if github_runner_repository_url
+  else 'default' }}.{{ github_runner_name }}
 
 # Service restart policy
 github_runner_service_restart_policy: "always"
@@ -150,6 +158,39 @@ github_runner_service_environment:
 
 # Service logging
 github_runner_service_log_level: "info"  # Options: error, warn, info, debug
+
+# Dedicated log file configuration
+github_runner_logging_enabled: false           # Enable dedicated log file instead of systemd journal
+github_runner_log_dir: "/var/log/github-runner"  # Log directory path
+github_runner_log_file: "runner.log"           # Main log file name
+github_runner_log_error_file: "runner-error.log"  # Error log file name
+github_runner_log_dir_mode: "0755"             # Log directory permissions
+github_runner_log_file_mode: "0644"            # Log file permissions
+
+# RSyslog integration configuration
+github_runner_rsyslog_enabled: true            # Enable RSyslog integration for professional logging (recommended)
+github_runner_syslog_identifier: "github-runner"  # Syslog program identifier for filtering
+github_runner_rsyslog_config_file: "49-github-runner.conf"  # RSyslog configuration file name
+github_runner_log_user: "syslog"               # Log file owner (system default)
+github_runner_log_group: "adm"                 # Log file group (system default)
+
+# Logrotate configuration
+github_runner_logrotate_options:
+  enabled: true                    # Enable logrotate configuration for GitHub Runner logs
+  frequency: "daily"               # Log rotation frequency (daily, weekly, monthly)
+  rotate_count: 30                 # Number of rotated log files to keep
+  # size: "100M"                   # Maximum log file size before rotation (commented out - add if needed)
+  compress: true                   # Compress rotated log files using gzip
+  delaycompress: true              # Delay compression by one cycle
+  missingok: true                  # Don't error if log file is missing
+  notifempty: true                 # Only rotate if log file is not empty
+  copytruncate: false              # Use copytruncate instead of moving files
+  dateext: false                   # Use date extension for rotated files instead of numbers
+  dateformat: ".%Y-%m-%d"          # Date format for rotated log files (requires dateext)
+  olddir: ""                       # Directory to move old log files to (empty = same directory)
+  create_mode: "0644"              # File permissions for newly created log files
+  create_owner: "{{ github_runner_user }}"  # Owner for newly created log files
+  create_group: "{{ github_runner_user_group }}"  # Group for newly created log files
 
 # -----------------------------------------------------------------------------
 # 6. Security Settings
