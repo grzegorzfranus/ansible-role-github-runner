@@ -127,6 +127,56 @@
     - service
     - check
 
+- name: 🔍 GitHub Runner | service | Debug service status (always show for troubleshooting)
+  ansible.builtin.debug:
+    msg:
+      - "🔍 Service Status Debug:"
+      - "   📝 Service Name: {{ github_runner_service_name }}"
+      - "   🎯 Target State: {{ github_runner_service_state }}"
+      - "   🚀 Target Enabled: {{ github_runner_service_enabled }}"
+      - "   📊 Expected Active State: {{ _expected_active_state }}"
+      - "   🔧 Expected Unit State: {{ _expected_unit_state }}"
+      - "   📈 Current Active State: {{ _github_runner_current_service_status.status.ActiveState | default('unknown') }}"
+      - "   ⚙️ Current Unit State: {{ _github_runner_current_service_status.status.UnitFileState | default('unknown') }}"
+      - "   📉 Current Sub State: {{ _github_runner_current_service_status.status.SubState | default('unknown') }}"
+      - "   ❓ Status Defined: {{ _github_runner_current_service_status.status is defined }}"
+  tags:
+    - service
+    - check
+
+- name: 🧪 GitHub Runner | service | Determine if service management needed
+  ansible.builtin.set_fact:
+    _service_needs_management: >-
+      {{
+        not _github_runner_current_service_status.status is defined or
+        (github_runner_service_state == 'started' and
+         _github_runner_current_service_status.status.ActiveState != 'active') or
+        (github_runner_service_state == 'stopped' and
+         _github_runner_current_service_status.status.ActiveState not in ['inactive', 'failed']) or
+        (github_runner_service_enabled and
+         _github_runner_current_service_status.status.UnitFileState != 'enabled') or
+        (not github_runner_service_enabled and
+         _github_runner_current_service_status.status.UnitFileState != 'disabled')
+      }}
+  tags:
+    - service
+    - check
+
+- name: 📊 GitHub Runner | service | Display service management decision (always show for troubleshooting)
+  ansible.builtin.debug:
+    msg:
+      - "🎯 Service Management Decision:"
+      - "   🔧 Service management needed: {{ _service_needs_management }}"
+      - "   📝 Evaluation logic:"
+      - "     - Status undefined: {{ not _github_runner_current_service_status.status is defined }}"
+      - "     - Need start: {{ github_runner_service_state == 'started' and _github_runner_current_service_status.status.ActiveState | default('unknown') != 'active' }}"
+      - "     - Need stop: {{ github_runner_service_state == 'stopped' and _github_runner_current_service_status.status.ActiveState | default('unknown') not in ['inactive', 'failed'] }}"
+      - "     - Need enable: {{ github_runner_service_enabled and _github_runner_current_service_status.status.UnitFileState | default('unknown') != 'enabled' }}"
+      - "     - Need disable: {{ not github_runner_service_enabled and _github_runner_current_service_status.status.UnitFileState | default('unknown') != 'disabled' }}"
+  tags:
+    - service
+    - check
+
 - name: 🚀 GitHub Runner | service | Enable and start GitHub Runner service
   become: true
   ansible.builtin.systemd:
@@ -135,9 +185,7 @@
     state: "{{ github_runner_service_state }}"
   register: _github_runner_service_result
   when: >
-    not _github_runner_current_service_status.status is defined or
-    _github_runner_current_service_status.status.ActiveState != _expected_active_state or
-    _github_runner_current_service_status.status.UnitFileState != _expected_unit_state
+    _service_needs_management | bool
   tags:
     - service
     - start
