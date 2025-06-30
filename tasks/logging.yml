@@ -32,21 +32,33 @@
     - setup
     - logging
 
+- name: 🔍 GitHub Runner | logging | Check existing log files
+  ansible.builtin.stat:
+    path: "{{ github_runner_log_dir }}/{{ item }}"
+  register: _github_runner_log_files_check
+  loop:
+    - "{{ github_runner_log_file }}"
+    - "{{ github_runner_log_error_file }}"
+  when: >
+    github_runner_logging_enabled | default(false)
+  tags:
+    - setup
+    - logging
+
 - name: 📄 GitHub Runner | logging | Create initial log files
   become: true
   ansible.builtin.file:
-    path: "{{ github_runner_log_dir }}/{{ item }}"
+    path: "{{ github_runner_log_dir }}/{{ item.item }}"
     state: touch
     owner: "{{ github_runner_log_user if github_runner_rsyslog_enabled else github_runner_user }}"
     group: "{{ github_runner_log_group if github_runner_rsyslog_enabled else github_runner_user_group }}"
     mode: "{{ github_runner_log_file_mode }}"
     modification_time: preserve
     access_time: preserve
-  loop:
-    - "{{ github_runner_log_file }}"
-    - "{{ github_runner_log_error_file }}"
+  loop: "{{ _github_runner_log_files_check.results }}"
   when: >
-    github_runner_logging_enabled | default(false)
+    github_runner_logging_enabled | default(false) and
+    not item.stat.exists
   tags:
     - setup
     - logging

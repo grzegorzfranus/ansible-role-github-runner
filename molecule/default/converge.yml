@@ -55,7 +55,7 @@
     # Installation configuration
     github_runner_install_dir: "/opt/actions-runner-test"
     github_runner_version: "latest"
-    github_runner_force_reinstall: true
+    github_runner_force_reinstall: false
 
     # Service configuration (don't start service in tests)
     github_runner_service_enabled: true

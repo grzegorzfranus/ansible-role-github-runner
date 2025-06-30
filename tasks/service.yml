@@ -27,6 +27,7 @@
     group: root
     mode: "0644"
     backup: true
+  register: _github_runner_service_file_result
   notify:
     - reload systemd
     - restart github runner
@@ -58,6 +59,7 @@
     group: root
     mode: "0644"
     backup: true
+  register: _github_runner_override_file_result
   notify:
     - reload systemd
     - restart github runner
@@ -86,8 +88,21 @@
 # -----------------------------------------------------------------------------
 # 4. Systemd Daemon Management
 # -----------------------------------------------------------------------------
-- name: 🔄 GitHub Runner | service | Flush handlers to reload systemd
-  ansible.builtin.meta: flush_handlers
+- name: 🔄 GitHub Runner | service | Set systemd reload flags
+  ansible.builtin.set_fact:
+    _github_runner_service_file_changed: "{{ _github_runner_service_file_result.changed | default(false) }}"
+    _github_runner_override_file_changed: "{{ _github_runner_override_file_result.changed | default(false) }}"
+  tags:
+    - service
+    - systemd
+
+- name: 🔄 GitHub Runner | service | Reload systemd daemon if needed
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: >
+    _github_runner_service_file_changed | default(false) or
+    _github_runner_override_file_changed | default(false)
   tags:
     - service
     - systemd
