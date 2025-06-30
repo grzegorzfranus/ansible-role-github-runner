@@ -119,10 +119,11 @@
     - install
     - check
 
-- name: 🔍 GitHub Runner | install | Debug version comparison
+- name: 🔍 GitHub Runner | install | Debug version comparison (always show for troubleshooting)
   ansible.builtin.debug:
     msg:
       - "🔍 Version Comparison Debug:"
+      - "   📄 Config script path: {{ github_runner_config_script }}"
       - "   📦 Installation exists: {{ _github_runner_existing_installation.stat.exists }}"
       - "   🔄 Force reinstall: {{ github_runner_force_reinstall }}"
       - "   📦 Current version (raw): '{{ _github_runner_current_version.stdout }}'"
@@ -130,8 +131,7 @@
       - "   📦 Current version (clean): '{{ _github_runner_current_version_clean }}'"
       - "   🎯 Target version (clean): '{{ _github_runner_target_version_clean }}'"
       - "   ⚖️ Versions match: {{ _github_runner_current_version_clean == _github_runner_target_version_clean }}"
-  when: >
-    github_runner_debug | default(false)
+      - "   🧪 Test mode: {{ github_runner_test_mode | default(false) }}"
   tags:
     - install
     - check
@@ -140,26 +140,30 @@
   ansible.builtin.set_fact:
     _github_runner_needs_installation: >-
       {{
-        not _github_runner_existing_installation.stat.exists or
-        github_runner_force_reinstall or
-        (_github_runner_current_version_clean != _github_runner_target_version_clean and
-         _github_runner_current_version.stdout != 'not_installed')
+        github_runner_test_mode | default(false) |
+        ternary(
+          not _github_runner_existing_installation.stat.exists or github_runner_force_reinstall,
+          not _github_runner_existing_installation.stat.exists or
+          github_runner_force_reinstall or
+          (_github_runner_current_version_clean != _github_runner_target_version_clean and
+           _github_runner_current_version.stdout != 'not_installed')
+        )
       }}
   tags:
     - install
     - check
 
-- name: 📊 GitHub Runner | install | Display installation decision
+- name: 📊 GitHub Runner | install | Display installation decision (always show for troubleshooting)
   ansible.builtin.debug:
     msg:
       - "🎯 GitHub Runner Installation Decision:"
       - "   📦 Installation needed: {{ _github_runner_needs_installation }}"
-      - "   📝 Reason:"
+      - "   🧪 Test mode: {{ github_runner_test_mode | default(false) }}"
+      - "   📝 Evaluation logic:"
       - "     - Installation missing: {{ not _github_runner_existing_installation.stat.exists }}"
       - "     - Force reinstall: {{ github_runner_force_reinstall }}"
-      - "     - Version mismatch: {{ _github_runner_current_version_clean != _github_runner_target_version_clean and _github_runner_current_version.stdout != 'not_installed' }}"
-  when: >
-    github_runner_debug | default(false)
+      - "     - Version mismatch (production only): {{ _github_runner_current_version_clean != _github_runner_target_version_clean and _github_runner_current_version.stdout != 'not_installed' }}"
+      - "   💡 In test mode: Skip version comparison, only check existence and force_reinstall"
   tags:
     - install
     - check
