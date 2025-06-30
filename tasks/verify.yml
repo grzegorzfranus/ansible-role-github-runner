@@ -277,6 +277,7 @@
       }}
   when: >
     github_runner_access_token | length > 0 and
+    _github_runner_verify_registration is defined and
     _github_runner_verify_registration.status == 200 and
     not (github_runner_test_mode | default(false))
   tags:
@@ -298,6 +299,7 @@
     msg: "⚠️ Runner '{{ github_runner_name }}' is not visible in GitHub API (may be offline or not yet connected)"
   when: >
     github_runner_access_token | length > 0 and
+    _github_runner_verify_registration is defined and
     _github_runner_verify_registration.status == 200 and
     not (_github_runner_found_in_github | default(false))
   tags:
