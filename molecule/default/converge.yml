@@ -42,6 +42,10 @@
     github_runner_rsyslog_enabled: true
     github_runner_log_dir: "/var/log/github-runner-test"
 
+    # Override log ownership for Docker containers (syslog user may not exist)
+    github_runner_log_user: "root"
+    github_runner_log_group: "root"
+
     # User configuration for testing
     github_runner_user: "test-runner"
     github_runner_user_group: "test-runner"
