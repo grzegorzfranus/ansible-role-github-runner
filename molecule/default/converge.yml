@@ -61,7 +61,7 @@
     github_runner_debug: true
 
     # Skip actual GitHub registration steps in testing
-    github_runner_role_action: "prerequisites,user,install,logging"
+    github_runner_role_action: "all"
 
   roles:
     - role: ../../..

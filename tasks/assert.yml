@@ -24,8 +24,8 @@
     that:
       - github_runner_role_action is defined
       - github_runner_role_action is string
-      - github_runner_role_action in ["all", "prerequisites", "user", "install", "configure", "service"]
-    fail_msg: "❌ Invalid role action '{{ github_runner_role_action | default('undefined') }}'. Must be one of: all, prerequisites, user, install, configure, service"
+      - github_runner_role_action in ["all", "prerequisites", "user", "install", "configure", "service", "logging"]
+    fail_msg: "❌ Invalid role action '{{ github_runner_role_action | default('undefined') }}'. Must be one of: all, prerequisites, user, install, configure, service, logging"
     success_msg: "✅ Role action parameter is valid: {{ github_runner_role_action }}"
 
 - name: 🧪 GitHub Runner | assert | Validate enabled flag
