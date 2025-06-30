@@ -37,6 +37,8 @@
     - "{{ github_runner_install_dir }}/bin/Runner.Worker"
     - "{{ github_runner_runner_config_file }}"
     - "{{ github_runner_credentials_file }}"
+  when: >
+    not (github_runner_test_mode | default(false))
   tags:
     - verify
     - files
@@ -49,6 +51,18 @@
     fail_msg: "❌ Essential file {{ item.item }} is missing or empty"
     success_msg: "✅ Essential file {{ item.item }} is present"
   loop: "{{ _github_runner_verify_files.results }}"
+  when: >
+    not (github_runner_test_mode | default(false))
+  tags:
+    - verify
+    - files
+
+- name: 🧪 GitHub Runner | verify | Mock file verification (test mode)
+  ansible.builtin.set_fact:
+    _github_runner_verify_files:
+      results: []
+  when: >
+    github_runner_test_mode | default(false)
   tags:
     - verify
     - files
@@ -94,7 +108,8 @@
     fail_msg: "❌ GitHub Runner service is not active. State: {{ _github_runner_verify_service.status.ActiveState }}/{{ _github_runner_verify_service.status.SubState }}"
     success_msg: "✅ GitHub Runner service is active and running"
   when: >
-    github_runner_service_enabled | default(true)
+    github_runner_service_enabled | default(true) and
+    not (github_runner_test_mode | default(false))
   tags:
     - verify
     - service
@@ -143,6 +158,23 @@
   register: _github_runner_verify_config
   changed_when: false
   check_mode: false
+  when: >
+    not (github_runner_test_mode | default(false))
+  tags:
+    - verify
+    - config
+
+- name: 🧪 GitHub Runner | verify | Mock runner configuration (test mode)
+  ansible.builtin.set_fact:
+    _github_runner_verify_config:
+      stdout: "Mock configuration in test mode"
+      stdout_lines:
+        - "Name: {{ github_runner_name }}"
+        - "Pool: default"
+        - "ID: mock-test-id"
+        - "URL: {{ github_runner_server_url }}/{{ github_runner_organization }}"
+  when: >
+    github_runner_test_mode | default(false)
   tags:
     - verify
     - config
@@ -211,7 +243,14 @@
 # -----------------------------------------------------------------------------
 - name: 🔍 GitHub Runner | verify | Check runner registration status
   ansible.builtin.uri:
-    url: "{{ github_runner_api_base_url }}/{{ 'orgs/' + github_runner_organization if github_runner_organization else 'repos/' + (github_runner_repository_url if not github_runner_repository_url.startswith('http') else github_runner_repository_url.split('/')[-2:] | join('/')) }}/actions/runners"
+    url: >-
+      {{ github_runner_api_base_url }}/{{
+        'orgs/' + github_runner_organization if github_runner_organization
+        else 'repos/' + (
+          github_runner_repository_url if not github_runner_repository_url.startswith('http')
+          else github_runner_repository_url.split('/')[-2:] | join('/')
+        )
+      }}/actions/runners
     method: GET
     headers:
       Authorization: "token {{ github_runner_access_token }}"
@@ -220,7 +259,8 @@
     validate_certs: "{{ github_runner_verify_ssl }}"
   register: _github_runner_verify_registration
   when: >
-    github_runner_access_token | length > 0
+    github_runner_access_token | length > 0 and
+    not (github_runner_test_mode | default(false))
   no_log: true
   failed_when: false
   tags:
@@ -237,7 +277,8 @@
       }}
   when: >
     github_runner_access_token | length > 0 and
-    _github_runner_verify_registration.status == 200
+    _github_runner_verify_registration.status == 200 and
+    not (github_runner_test_mode | default(false))
   tags:
     - verify
     - registration
@@ -326,15 +367,31 @@
       - "   📦 Installation: ✅ Complete ({{ github_runner_install_dir }})"
       - "   🏷️ Version: {{ _github_runner_verify_version.stdout if _github_runner_verify_version.stdout != 'unknown' else '❓ Unknown' }}"
       - "   👤 User: {{ github_runner_user }} ({{ _github_runner_verify_ownership.stat.pw_name }}:{{ _github_runner_verify_ownership.stat.gr_name }})"
-      - "   🚀 Service: {{ '✅ Active' if _github_runner_verify_service.status.ActiveState == 'active' else '❌ Inactive' }} ({{ github_runner_service_name }})"
-      - "   🔧 Configuration: {{ '✅ Valid' if _github_runner_verify_config.stdout != 'Configuration not found' else '❌ Missing' }}"
+      - >-
+        🚀 Service: {{
+          '🧪 Test Mode' if github_runner_test_mode | default(false)
+          else ('✅ Active' if _github_runner_verify_service.status.ActiveState == 'active'
+                else '❌ Inactive')
+        }} ({{ github_runner_service_name }})
+      - >-
+        🔧 Configuration: {{
+          '🧪 Mocked' if github_runner_test_mode | default(false)
+          else ('✅ Valid' if _github_runner_verify_config.stdout != 'Configuration not found'
+                else '❌ Missing')
+        }}
       - "   🌐 Connectivity: {{ '✅ Connected' if _github_runner_verify_connectivity.status == 200 else '❌ Failed' }}"
-      - "   📋 Registration: {{ '✅ Registered' if (_github_runner_found_in_github | default(false)) else '⚠️ Not Visible' if github_runner_access_token | length > 0 else '❓ Not Checked' }}"
+      - >-
+        📋 Registration: {{
+          '🧪 Test Mode' if github_runner_test_mode | default(false)
+          else ('✅ Registered' if (_github_runner_found_in_github | default(false))
+                else '⚠️ Not Visible' if github_runner_access_token | length > 0
+                else '❓ Not Checked')
+        }}
       - "   🏃 Processes: {{ '✅ Running' if 'No runner processes found' not in _github_runner_verify_processes.stdout else '⚠️ None Found' }}"
       - "   💾 Disk Space: {{ _github_runner_verify_disk.stdout }}"
       - "   🧠 Memory: {{ _github_runner_verify_memory.stdout }}"
       - "   📋 Log Files: {{ _github_runner_verify_logs.files | length }} recent files"
-      - "   ✅ Verification completed successfully"
+      - "   {{ '🧪 Test mode verification completed successfully' if github_runner_test_mode | default(false) else '✅ Verification completed successfully' }}"
   tags:
     - verify
     - report
@@ -347,10 +404,12 @@
     _github_runner_health_status: >-
       {{
         'healthy' if (
-          _github_runner_verify_install_dir.stat.exists and
-          _github_runner_verify_service.status.ActiveState == 'active' and
-          _github_runner_verify_connectivity.status == 200 and
-          _github_runner_verify_version.stdout != 'unknown'
+          github_runner_test_mode | default(false) or (
+            _github_runner_verify_install_dir.stat.exists and
+            _github_runner_verify_service.status.ActiveState == 'active' and
+            _github_runner_verify_connectivity.status == 200 and
+            _github_runner_verify_version.stdout != 'unknown'
+          )
         ) else 'unhealthy'
       }}
   tags:
