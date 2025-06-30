@@ -67,7 +67,20 @@
     headers: "{{ github_runner_api_headers }}"
   register: _github_runner_latest_release
   when: >
-    github_runner_version == "latest"
+    github_runner_version == "latest" and
+    not (github_runner_test_mode | default(false))
+  tags:
+    - install
+    - version
+
+- name: 🧪 GitHub Runner | install | Mock latest version for test mode
+  ansible.builtin.set_fact:
+    _github_runner_latest_release:
+      json:
+        tag_name: "v2.311.0"
+  when: >
+    github_runner_version == "latest" and
+    github_runner_test_mode | default(false)
   tags:
     - install
     - version
@@ -90,7 +103,7 @@
       - "   🔄 Requested: {{ github_runner_version }}"
       - "   🎯 Target: {{ _github_runner_target_version }}"
       - "   📦 Current: {{ _github_runner_current_version.stdout if _github_runner_current_version.stdout != 'not_installed' else 'Not Installed' }}"
-      - "   ✅ Installation {{ 'required' if (not _github_runner_existing_installation.stat.exists or github_runner_force_reinstall or _github_runner_current_version.stdout != _github_runner_target_version.lstrip('v')) else 'not required' }}"
+      - "   🧪 Test Mode: {{ github_runner_test_mode | default(false) }}"
   tags:
     - install
     - version
@@ -98,14 +111,55 @@
 # -----------------------------------------------------------------------------
 # 3. Installation Decision
 # -----------------------------------------------------------------------------
+- name: 🧪 GitHub Runner | install | Normalize version strings for comparison
+  ansible.builtin.set_fact:
+    _github_runner_current_version_clean: "{{ _github_runner_current_version.stdout | regex_replace('^v', '') }}"
+    _github_runner_target_version_clean: "{{ _github_runner_target_version | regex_replace('^v', '') }}"
+  tags:
+    - install
+    - check
+
+- name: 🔍 GitHub Runner | install | Debug version comparison
+  ansible.builtin.debug:
+    msg:
+      - "🔍 Version Comparison Debug:"
+      - "   📦 Installation exists: {{ _github_runner_existing_installation.stat.exists }}"
+      - "   🔄 Force reinstall: {{ github_runner_force_reinstall }}"
+      - "   📦 Current version (raw): '{{ _github_runner_current_version.stdout }}'"
+      - "   🎯 Target version (raw): '{{ _github_runner_target_version }}'"
+      - "   📦 Current version (clean): '{{ _github_runner_current_version_clean }}'"
+      - "   🎯 Target version (clean): '{{ _github_runner_target_version_clean }}'"
+      - "   ⚖️ Versions match: {{ _github_runner_current_version_clean == _github_runner_target_version_clean }}"
+  when: >
+    github_runner_debug | default(false)
+  tags:
+    - install
+    - check
+
 - name: 🧪 GitHub Runner | install | Determine if installation is needed
   ansible.builtin.set_fact:
     _github_runner_needs_installation: >-
       {{
         not _github_runner_existing_installation.stat.exists or
         github_runner_force_reinstall or
-        _github_runner_current_version.stdout != _github_runner_target_version.lstrip('v')
+        (_github_runner_current_version_clean != _github_runner_target_version_clean and
+         _github_runner_current_version.stdout != 'not_installed')
       }}
+  tags:
+    - install
+    - check
+
+- name: 📊 GitHub Runner | install | Display installation decision
+  ansible.builtin.debug:
+    msg:
+      - "🎯 GitHub Runner Installation Decision:"
+      - "   📦 Installation needed: {{ _github_runner_needs_installation }}"
+      - "   📝 Reason:"
+      - "     - Installation missing: {{ not _github_runner_existing_installation.stat.exists }}"
+      - "     - Force reinstall: {{ github_runner_force_reinstall }}"
+      - "     - Version mismatch: {{ _github_runner_current_version_clean != _github_runner_target_version_clean and _github_runner_current_version.stdout != 'not_installed' }}"
+  when: >
+    github_runner_debug | default(false)
   tags:
     - install
     - check
@@ -345,17 +399,32 @@
 # -----------------------------------------------------------------------------
 # 9. Cleanup
 # -----------------------------------------------------------------------------
-- name: 🧹 GitHub Runner | install | Clean up temporary files
-  become: true
-  ansible.builtin.file:
+- name: 🔍 GitHub Runner | install | Check temporary files for cleanup
+  ansible.builtin.stat:
     path: "{{ item }}"
-    state: absent
+  register: _github_runner_temp_files_check
   loop:
     - "{{ github_runner_temp_dir }}"
     - "{{ _github_runner_package_file | default('') }}"
   when: >
     _github_runner_needs_installation | bool and
-    github_runner_cleanup | default(true)
+    github_runner_cleanup | default(true) and
+    item | length > 0
+  tags:
+    - install
+    - cleanup
+
+- name: 🧹 GitHub Runner | install | Clean up temporary files
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.item }}"
+    state: absent
+  loop: "{{ _github_runner_temp_files_check.results | default([]) }}"
+  when: >
+    _github_runner_needs_installation | bool and
+    github_runner_cleanup | default(true) and
+    item.stat is defined and
+    item.stat.exists
   tags:
     - install
     - cleanup
