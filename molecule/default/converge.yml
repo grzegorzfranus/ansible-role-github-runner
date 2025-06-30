@@ -64,6 +64,9 @@
     # Debug mode for testing
     github_runner_debug: true
 
+    # Test mode - skip GitHub API calls
+    github_runner_test_mode: true
+
     # Skip actual GitHub registration steps in testing
     github_runner_role_action: "all"
 

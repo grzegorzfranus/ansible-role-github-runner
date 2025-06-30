@@ -59,7 +59,11 @@
 # -----------------------------------------------------------------------------
 - name: 🔑 GitHub Runner | configure | Get repository registration token
   ansible.builtin.uri:
-    url: "{{ github_runner_api_base_url }}/repos/{{ github_runner_repository_url if not github_runner_repository_url.startswith('http') else github_runner_repository_url.split('/')[-2:] | join('/') }}/actions/runners/registration-token"
+    url: >-
+      {{ github_runner_api_base_url }}/repos/{{
+        github_runner_repository_url if not github_runner_repository_url.startswith('http')
+        else github_runner_repository_url.split('/')[-2:] | join('/')
+      }}/actions/runners/registration-token
     method: POST
     headers:
       Authorization: "token {{ github_runner_access_token }}"
@@ -71,7 +75,8 @@
   when: >
     _github_runner_scope == 'repository' and
     github_runner_access_token | length > 0 and
-    github_runner_token_direct | length == 0
+    github_runner_token_direct | length == 0 and
+    not (github_runner_test_mode | default(false))
   no_log: true
   tags:
     - configure
@@ -91,7 +96,8 @@
   when: >
     _github_runner_scope == 'organization' and
     github_runner_access_token | length > 0 and
-    github_runner_token_direct | length == 0
+    github_runner_token_direct | length == 0 and
+    not (github_runner_test_mode | default(false))
   no_log: true
   tags:
     - configure
@@ -101,11 +107,14 @@
   ansible.builtin.set_fact:
     _github_runner_registration_token: >-
       {{
-        github_runner_token_direct if github_runner_token_direct | length > 0
+        'mock-test-token' if github_runner_test_mode | default(false)
         else (
-          _github_runner_repo_token.json.token if _github_runner_scope == 'repository' and _github_runner_repo_token is defined
-          else _github_runner_org_token.json.token if _github_runner_scope == 'organization' and _github_runner_org_token is defined
-          else ''
+          github_runner_token_direct if github_runner_token_direct | length > 0
+          else (
+            _github_runner_repo_token.json.token if _github_runner_scope == 'repository' and _github_runner_repo_token is defined
+            else _github_runner_org_token.json.token if _github_runner_scope == 'organization' and _github_runner_org_token is defined
+            else ''
+          )
         )
       }}
   no_log: true
@@ -170,7 +179,8 @@
     sudo -u "{{ github_runner_user }}" ./config.sh remove --unattended --token "{{ _github_runner_registration_token }}"
   when: >
     _github_runner_existing_config.stat.exists and
-    github_runner_replace | bool
+    github_runner_replace | bool and
+    not (github_runner_test_mode | default(false))
   no_log: true
   failed_when: false
   changed_when: false
@@ -211,10 +221,24 @@
       {{ '--replace' if github_runner_replace else '' }} \
       {{ '--runnergroup "' + github_runner_group + '"' if github_runner_group else '' }}
   when: >
-    _github_runner_needs_configuration | bool
+    _github_runner_needs_configuration | bool and
+    not (github_runner_test_mode | default(false))
   no_log: true
   register: _github_runner_config_result
   changed_when: _github_runner_config_result.rc == 0
+  tags:
+    - configure
+    - register
+
+- name: 🧪 GitHub Runner | configure | Mock GitHub Runner configuration (test mode)
+  ansible.builtin.set_fact:
+    _github_runner_config_result:
+      rc: 0
+      stdout: "Mock configuration success in test mode"
+      stderr: ""
+  when: >
+    _github_runner_needs_configuration | bool and
+    github_runner_test_mode | default(false)
   tags:
     - configure
     - register
@@ -249,6 +273,8 @@
   loop:
     - "{{ github_runner_runner_config_file }}"
     - "{{ github_runner_credentials_file }}"
+  when: >
+    not (github_runner_test_mode | default(false))
   tags:
     - configure
     - verify
@@ -261,6 +287,8 @@
     fail_msg: "❌ Configuration file {{ item.item }} is missing or empty"
     success_msg: "✅ Configuration file {{ item.item }} is present and valid"
   loop: "{{ _github_runner_config_files.results }}"
+  when: >
+    not (github_runner_test_mode | default(false))
   tags:
     - configure
     - verify
@@ -278,6 +306,8 @@
   loop:
     - "{{ github_runner_runner_config_file }}"
     - "{{ github_runner_credentials_file }}"
+  when: >
+    not (github_runner_test_mode | default(false))
   tags:
     - configure
     - permissions
@@ -298,6 +328,22 @@
     fi
   register: _github_runner_config_details
   changed_when: false
+  when: >
+    not (github_runner_test_mode | default(false))
+  tags:
+    - configure
+    - info
+
+- name: 🧪 GitHub Runner | configure | Mock runner configuration details (test mode)
+  ansible.builtin.set_fact:
+    _github_runner_config_details:
+      stdout_lines:
+        - "Agent Name: {{ github_runner_name }}"
+        - "Agent Pool: default"
+        - "Agent ID: mock-test-id"
+        - "Server URL: {{ _github_runner_target_url }}"
+  when: >
+    github_runner_test_mode | default(false)
   tags:
     - configure
     - info
@@ -317,7 +363,13 @@
       - "   📁 Work Dir: {{ github_runner_work_dir }}"
       - "   💨 Ephemeral: {{ github_runner_ephemeral }}"
       - "   👥 Group: {{ github_runner_group if github_runner_group else 'default' }}"
-      - "   🔒 Config Files: {{ 'Secured' if _github_runner_config_files.results | selectattr('stat.exists') | list | length == 2 else 'Issue Detected' }}"
+      - >-
+        🔒 Config Files: {{
+          'Secured' if not (github_runner_test_mode | default(false)) and
+          _github_runner_config_files.results | selectattr('stat.exists') | list | length == 2
+          else 'Mocked (test mode)' if github_runner_test_mode | default(false)
+          else 'Issue Detected'
+        }}
       - "   ✅ Configuration {{ 'completed successfully' if _github_runner_needs_configuration else 'verified' }}"
   tags:
     - configure
