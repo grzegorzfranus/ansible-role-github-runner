@@ -115,6 +115,21 @@
     name: "{{ github_runner_service_name }}"
   register: _github_runner_current_service_status
   failed_when: false
+  when: >
+    not (github_runner_test_mode | default(false))
+  tags:
+    - service
+    - check
+
+- name: 🧪 GitHub Runner | service | Mock service status for test mode
+  ansible.builtin.set_fact:
+    _github_runner_current_service_status:
+      status:
+        ActiveState: "{{ 'active' if github_runner_service_state == 'started' else 'inactive' }}"
+        UnitFileState: "{{ 'enabled' if github_runner_service_enabled else 'disabled' }}"
+        SubState: "{{ 'running' if github_runner_service_state == 'started' else 'dead' }}"
+  when: >
+    (github_runner_test_mode | default(false))
   tags:
     - service
     - check
@@ -148,7 +163,8 @@
   ansible.builtin.set_fact:
     _service_needs_management: >-
       {{
-        not _github_runner_current_service_status.status is defined or
+        (github_runner_test_mode | default(false)) or
+        (not _github_runner_current_service_status.status is defined) or
         (github_runner_service_state == 'started' and
          _github_runner_current_service_status.status.ActiveState != 'active') or
         (github_runner_service_state == 'stopped' and
@@ -167,7 +183,9 @@
     msg:
       - "🎯 Service Management Decision:"
       - "   🔧 Service management needed: {{ _service_needs_management }}"
+      - "   🧪 Test Mode: {{ github_runner_test_mode | default(false) }}"
       - "   📝 Evaluation logic:"
+      - "     - Test mode: {{ github_runner_test_mode | default(false) }}"
       - "     - Status undefined: {{ not _github_runner_current_service_status.status is defined }}"
       - "     - Need start: {{ github_runner_service_state == 'started' and _github_runner_current_service_status.status.ActiveState | default('unknown') != 'active' }}"
       - "     - Need stop: {{ github_runner_service_state == 'stopped' and _github_runner_current_service_status.status.ActiveState | default('unknown') not in ['inactive', 'failed'] }}"
@@ -185,7 +203,24 @@
     state: "{{ github_runner_service_state }}"
   register: _github_runner_service_result
   when: >
-    _service_needs_management | bool
+    _service_needs_management | bool and
+    not (github_runner_test_mode | default(false))
+  tags:
+    - service
+    - start
+
+- name: 🧪 GitHub Runner | service | Mock service management for test mode
+  ansible.builtin.debug:
+    msg:
+      - "🧪 Test Mode: Service management mocked"
+      - "   📝 Service Name: {{ github_runner_service_name }}"
+      - "   🚀 Target Enabled: {{ github_runner_service_enabled }}"
+      - "   🎯 Target State: {{ github_runner_service_state }}"
+      - "   ⚠️ Actual systemd operations skipped in test mode"
+  register: _github_runner_service_result
+  when: >
+    _service_needs_management | bool and
+    (github_runner_test_mode | default(false))
   tags:
     - service
     - start
@@ -207,6 +242,21 @@
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
   register: _github_runner_service_status
+  when: >
+    not (github_runner_test_mode | default(false))
+  tags:
+    - service
+    - status
+
+- name: 🧪 GitHub Runner | service | Mock final service status for test mode
+  ansible.builtin.set_fact:
+    _github_runner_service_status:
+      status:
+        ActiveState: "{{ 'active' if github_runner_service_state == 'started' else 'inactive' }}"
+        UnitFileState: "{{ 'enabled' if github_runner_service_enabled else 'disabled' }}"
+        SubState: "{{ 'running' if github_runner_service_state == 'started' else 'dead' }}"
+  when: >
+    (github_runner_test_mode | default(false))
   tags:
     - service
     - status
@@ -241,7 +291,21 @@
     name: "{{ github_runner_service_name }}"
   register: _github_runner_service_health
   when: >
-    github_runner_service_state == "started"
+    github_runner_service_state == "started" and
+    not (github_runner_test_mode | default(false))
+  tags:
+    - service
+    - health
+
+- name: 🧪 GitHub Runner | service | Mock service health check for test mode
+  ansible.builtin.set_fact:
+    _github_runner_service_health:
+      status:
+        ActiveState: "active"
+        SubState: "running"
+  when: >
+    github_runner_service_state == "started" and
+    (github_runner_test_mode | default(false))
   tags:
     - service
     - health
@@ -254,7 +318,8 @@
     fail_msg: "❌ GitHub Runner service is not running properly. State: {{ _github_runner_service_health.status.ActiveState }}/{{ _github_runner_service_health.status.SubState }}"
     success_msg: "✅ GitHub Runner service is running and healthy"
   when: >
-    github_runner_service_state == "started"
+    github_runner_service_state == "started" and
+    _github_runner_service_health is defined
   tags:
     - service
     - health
