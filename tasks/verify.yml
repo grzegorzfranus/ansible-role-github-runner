@@ -278,6 +278,7 @@
   when: >
     github_runner_access_token | length > 0 and
     _github_runner_verify_registration is defined and
+    _github_runner_verify_registration.status is defined and
     _github_runner_verify_registration.status == 200 and
     not (github_runner_test_mode | default(false))
   tags:
@@ -300,6 +301,7 @@
   when: >
     github_runner_access_token | length > 0 and
     _github_runner_verify_registration is defined and
+    _github_runner_verify_registration.status is defined and
     _github_runner_verify_registration.status == 200 and
     not (_github_runner_found_in_github | default(false))
   tags:
