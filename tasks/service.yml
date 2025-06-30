@@ -110,23 +110,44 @@
 # -----------------------------------------------------------------------------
 # 5. Service State Management
 # -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | service | Check current service status
+  ansible.builtin.systemd:
+    name: "{{ github_runner_service_name }}"
+  register: _github_runner_current_service_status
+  failed_when: false
+  tags:
+    - service
+    - check
+
+- name: 🧪 GitHub Runner | service | Set expected service states
+  ansible.builtin.set_fact:
+    _expected_active_state: "{{ 'active' if github_runner_service_state == 'started' else 'inactive' }}"
+    _expected_unit_state: "{{ 'enabled' if github_runner_service_enabled else 'disabled' }}"
+  tags:
+    - service
+    - check
+
 - name: 🚀 GitHub Runner | service | Enable and start GitHub Runner service
   become: true
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
     enabled: "{{ github_runner_service_enabled }}"
     state: "{{ github_runner_service_state }}"
-    daemon_reload: true
   register: _github_runner_service_result
+  when: >
+    not _github_runner_current_service_status.status is defined or
+    _github_runner_current_service_status.status.ActiveState != _expected_active_state or
+    _github_runner_current_service_status.status.UnitFileState != _expected_unit_state
   tags:
     - service
     - start
 
 - name: ✅ GitHub Runner | service | Verify service startup
   ansible.builtin.debug:
-    msg: "✅ GitHub Runner service {{ _github_runner_service_result.state }}: {{ github_runner_service_name }}"
+    msg: "✅ GitHub Runner service {{ _github_runner_service_result.state | default('unchanged') }}: {{ github_runner_service_name }}"
   when: >
-    _github_runner_service_result is succeeded
+    _github_runner_service_result is defined and
+    (_github_runner_service_result is succeeded or _github_runner_service_result is skipped)
   tags:
     - service
     - verify

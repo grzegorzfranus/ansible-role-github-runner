@@ -17,6 +17,16 @@
 # -----------------------------------------------------------------------------
 # 1. Log Directory Management
 # -----------------------------------------------------------------------------
+- name: 🔍 GitHub Runner | logging | Check log directory status
+  ansible.builtin.stat:
+    path: "{{ github_runner_log_dir }}"
+  register: _github_runner_log_dir_check
+  when: >
+    github_runner_logging_enabled | default(false)
+  tags:
+    - setup
+    - logging
+
 - name: 📁 GitHub Runner | logging | Create log directory
   become: true
   ansible.builtin.file:
@@ -25,9 +35,25 @@
     owner: "{{ github_runner_log_user if github_runner_rsyslog_enabled else github_runner_user }}"
     group: "{{ github_runner_log_group if github_runner_rsyslog_enabled else github_runner_user_group }}"
     mode: "{{ github_runner_log_dir_mode }}"
-    recurse: true
   when: >
     github_runner_logging_enabled | default(false)
+  tags:
+    - setup
+    - logging
+
+- name: 🔒 GitHub Runner | logging | Fix log directory permissions (if needed)
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_log_dir }}"
+    owner: "{{ github_runner_log_user if github_runner_rsyslog_enabled else github_runner_user }}"
+    group: "{{ github_runner_log_group if github_runner_rsyslog_enabled else github_runner_user_group }}"
+    mode: "{{ github_runner_log_dir_mode }}"
+    recurse: true
+  when: >
+    github_runner_logging_enabled | default(false) and
+    _github_runner_log_dir_check.stat.exists and
+    (_github_runner_log_dir_check.stat.pw_name != (github_runner_log_user if github_runner_rsyslog_enabled else github_runner_user) or
+     _github_runner_log_dir_check.stat.gr_name != (github_runner_log_group if github_runner_rsyslog_enabled else github_runner_user_group))
   tags:
     - setup
     - logging
