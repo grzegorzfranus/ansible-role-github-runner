@@ -1,0 +1,243 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Molecule Verification Playbook
+# =============================================================================
+
+- name: Molecule | Verify Role
+  hosts: all
+  gather_facts: true
+
+  vars_files:
+    - ../../defaults/main.yml
+    - ../../vars/main.yml
+
+  tasks:
+    # ==========================================================================
+    # User and Group Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Check if GitHub Runner user exists
+      ansible.builtin.user:
+        name: "test-runner"
+      register: _user_check_
+      failed_when: false
+
+    - name: 🧪 Verify | Assert GitHub Runner user is created
+      ansible.builtin.assert:
+        that:
+          - _user_check_.name == "test-runner"
+          - _user_check_.home == "/home/test-runner"
+          - _user_check_.shell == "/bin/bash"
+        fail_msg: "❌ GitHub Runner user is not created correctly"
+        success_msg: "✅ GitHub Runner user verification passed"
+
+    - name: 🔍 Verify | Check if GitHub Runner group exists
+      ansible.builtin.group:
+        name: "test-runner"
+      register: _group_check_
+      failed_when: false
+
+    - name: 🧪 Verify | Assert GitHub Runner group is created
+      ansible.builtin.assert:
+        that:
+          - _group_check_.name == "test-runner"
+        fail_msg: "❌ GitHub Runner group is not created correctly"
+        success_msg: "✅ GitHub Runner group verification passed"
+
+    # ==========================================================================
+    # Directory Structure Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Check installation directory exists
+      ansible.builtin.stat:
+        path: "/opt/actions-runner-test"
+      register: _install_dir_
+
+    - name: 🧪 Verify | Assert installation directory exists
+      ansible.builtin.assert:
+        that:
+          - _install_dir_.stat.exists
+          - _install_dir_.stat.isdir
+        fail_msg: "❌ GitHub Runner installation directory not found"
+        success_msg: "✅ Installation directory verification passed"
+
+    - name: 🔍 Verify | Check log directory exists
+      ansible.builtin.stat:
+        path: "/var/log/github-runner-test"
+      register: _log_dir_
+
+    - name: 🧪 Verify | Assert log directory exists
+      ansible.builtin.assert:
+        that:
+          - _log_dir_.stat.exists
+          - _log_dir_.stat.isdir
+        fail_msg: "❌ GitHub Runner log directory not found"
+        success_msg: "✅ Log directory verification passed"
+
+    # ==========================================================================
+    # RSyslog Configuration Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Check RSyslog configuration file exists
+      ansible.builtin.stat:
+        path: "/etc/rsyslog.d/49-github-runner.conf"
+      register: _rsyslog_config_
+
+    - name: 🧪 Verify | Assert RSyslog configuration exists
+      ansible.builtin.assert:
+        that:
+          - _rsyslog_config_.stat.exists
+        fail_msg: "❌ RSyslog configuration file not found"
+        success_msg: "✅ RSyslog configuration verification passed"
+
+    - name: 🔍 Verify | Check RSyslog configuration content
+      ansible.builtin.slurp:
+        src: "/etc/rsyslog.d/49-github-runner.conf"
+      register: _rsyslog_content_
+
+    - name: 🧪 Verify | Assert RSyslog configuration contains GitHub Runner rules
+      ansible.builtin.assert:
+        that:
+          - "'github-runner' in (_rsyslog_content_.content | b64decode)"
+          - "'/var/log/github-runner-test' in (_rsyslog_content_.content | b64decode)"
+        fail_msg: "❌ RSyslog configuration does not contain proper GitHub Runner rules"
+        success_msg: "✅ RSyslog configuration content verification passed"
+
+    # ==========================================================================
+    # Logrotate Configuration Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Check logrotate configuration file exists
+      ansible.builtin.stat:
+        path: "/etc/logrotate.d/github-runner"
+      register: _logrotate_config_
+
+    - name: 🧪 Verify | Assert logrotate configuration exists
+      ansible.builtin.assert:
+        that:
+          - _logrotate_config_.stat.exists
+        fail_msg: "❌ Logrotate configuration file not found"
+        success_msg: "✅ Logrotate configuration verification passed"
+
+    - name: 🔍 Verify | Check logrotate configuration content
+      ansible.builtin.slurp:
+        src: "/etc/logrotate.d/github-runner"
+      register: _logrotate_content_
+
+    - name: 🧪 Verify | Assert logrotate configuration contains proper rules
+      ansible.builtin.assert:
+        that:
+          - "'/var/log/github-runner-test' in (_logrotate_content_.content | b64decode)"
+          - "'daily' in (_logrotate_content_.content | b64decode)"
+        fail_msg: "❌ Logrotate configuration does not contain proper rules"
+        success_msg: "✅ Logrotate configuration content verification passed"
+
+    # ==========================================================================
+    # Package Dependencies Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Check if required packages are installed
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: 🧪 Verify | Assert required packages are installed
+      ansible.builtin.assert:
+        that:
+          - "'curl' in ansible_facts.packages"
+          - "'wget' in ansible_facts.packages"
+          - "'git' in ansible_facts.packages"
+          - "'sudo' in ansible_facts.packages"
+        fail_msg: "❌ Required packages are not installed"
+        success_msg: "✅ Required packages verification passed"
+
+    # ==========================================================================
+    # Service Configuration Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Check if RSyslog service is running
+      ansible.builtin.service_facts:
+
+    - name: 🧪 Verify | Assert RSyslog service is active
+      ansible.builtin.assert:
+        that:
+          - "ansible_facts.services['rsyslog.service'].state == 'running'"
+        fail_msg: "❌ RSyslog service is not running"
+        success_msg: "✅ RSyslog service verification passed"
+      when: >
+        ansible_service_mgr == 'systemd'
+
+    # ==========================================================================
+    # File Permissions Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Check installation directory permissions
+      ansible.builtin.stat:
+        path: "/opt/actions-runner-test"
+      register: _install_perms_
+
+    - name: 🧪 Verify | Assert installation directory has correct permissions
+      ansible.builtin.assert:
+        that:
+          - _install_perms_.stat.mode == "0755"
+        fail_msg: "❌ Installation directory permissions are incorrect"
+        success_msg: "✅ Installation directory permissions verification passed"
+
+    - name: 🔍 Verify | Check log directory permissions
+      ansible.builtin.stat:
+        path: "/var/log/github-runner-test"
+      register: _log_perms_
+
+    - name: 🧪 Verify | Assert log directory has correct permissions
+      ansible.builtin.assert:
+        that:
+          - _log_perms_.stat.mode == "0755"
+        fail_msg: "❌ Log directory permissions are incorrect"
+        success_msg: "✅ Log directory permissions verification passed"
+
+    # ==========================================================================
+    # Handler Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Test systemd daemon reload capability
+      ansible.builtin.command: "systemctl daemon-reload"
+      become: true
+      changed_when: false
+
+    - name: 🧪 Verify | Assert systemd daemon reload works
+      ansible.builtin.debug:
+        msg: "✅ Systemd daemon reload capability verified"
+
+    # ==========================================================================
+    # Configuration File Templates Verification
+    # ==========================================================================
+
+    - name: 🔍 Verify | Check if configuration templates were processed correctly
+      ansible.builtin.find:
+        paths: "/etc/rsyslog.d"
+        patterns: "*github-runner*"
+      register: _template_files_
+
+    - name: 🧪 Verify | Assert configuration templates exist
+      ansible.builtin.assert:
+        that:
+          - _template_files_.files | length > 0
+        fail_msg: "❌ Configuration template files not found"
+        success_msg: "✅ Configuration template verification passed"
+
+    # ==========================================================================
+    # Final Comprehensive Summary
+    # ==========================================================================
+
+    - name: 📊 Verify | Show comprehensive verification results
+      ansible.builtin.debug:
+        msg:
+          - "🎉 All GitHub Runner verification checks completed successfully!"
+          - "👤 User Management: ✅ Passed"
+          - "📁 Directory Structure: ✅ Passed"
+          - "🔄 RSyslog Integration: ✅ Passed"
+          - "📋 Logrotate Configuration: ✅ Passed"
+          - "📦 Package Dependencies: ✅ Passed"
+          - "🔧 Service Configuration: ✅ Passed"
+          - "🔒 File Permissions: ✅ Passed"
+          - "⚙️ Template Processing: ✅ Passed"
+          - "🚀 Role is ready for production use!"

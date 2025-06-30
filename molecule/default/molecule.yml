@@ -1,0 +1,59 @@
+---
+role_name_check: 1
+
+dependency:
+  name: galaxy
+  options:
+    ignore-errors: true
+
+driver:
+  name: docker
+
+platforms:
+  - name: instance
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-rockylinux9}-ansible:latest"
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    privileged: true
+    pre_build_image: true
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: ${MOLECULE_PLAYBOOK:-converge.yml}
+    verify: ${MOLECULE_PLAYBOOK:-verify.yml}
+    prepare: ${MOLECULE_PLAYBOOK:-prepare.yml}
+  lint:
+    name: ansible-lint
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+    ssh_connection:
+      pipelining: true
+  env:
+    ANSIBLE_FORCE_COLOR: "true"
+  inventory:
+    group_vars:
+      all:
+        # Mock GitHub authentication for testing
+        github_runner_access_token: "ghp_mock_token_for_testing_only"
+        github_runner_organization: "test-org"
+        github_runner_name: "test-runner"
+
+        # Enable logging features for testing
+        github_runner_logging_enabled: true
+        github_runner_rsyslog_enabled: true
+
+        # Skip actual GitHub registration for testing
+        github_runner_role_action: "all"
+
+        # Test-specific configurations
+        github_runner_debug: true
+        github_runner_force_reinstall: true
+
+verifier:
+  name: ansible
+  options:
+    verbose: true

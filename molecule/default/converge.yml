@@ -1,0 +1,77 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Molecule Convergence Playbook
+# =============================================================================
+
+- name: Molecule | Converge
+  hosts: all
+
+  pre_tasks:
+    - name: 🔄 Converge | Update apt cache
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+      changed_when: false
+      when: >
+        ansible_os_family == "Debian"
+
+    - name: ⏳ Converge | Wait for systemd to complete initialization
+      become: true
+      ansible.builtin.systemd:
+        name: multi-user.target
+        state: started
+      register: systemctl_status
+      until: true
+      retries: 30
+      delay: 5
+      when: >
+        ansible_service_mgr == 'systemd'
+      changed_when: false
+      failed_when: false
+
+  vars:
+    # Mock GitHub configuration for testing
+    github_runner_access_token: "ghp_mock_token_for_testing_only"
+    github_runner_organization: "test-org"
+    github_runner_name: "test-runner-{{ ansible_hostname }}"
+    github_runner_labels: "test,molecule,{{ ansible_distribution | lower }}"
+
+    # Enable logging features for comprehensive testing
+    github_runner_logging_enabled: true
+    github_runner_rsyslog_enabled: true
+    github_runner_log_dir: "/var/log/github-runner-test"
+
+    # User configuration for testing
+    github_runner_user: "test-runner"
+    github_runner_user_group: "test-runner"
+    github_runner_user_home: "/home/test-runner"
+    github_runner_create_user: true
+
+    # Installation configuration
+    github_runner_install_dir: "/opt/actions-runner-test"
+    github_runner_version: "latest"
+    github_runner_force_reinstall: true
+
+    # Service configuration (don't start service in tests)
+    github_runner_service_enabled: true
+    github_runner_service_state: "stopped"
+
+    # Debug mode for testing
+    github_runner_debug: true
+
+    # Skip actual GitHub registration steps in testing
+    github_runner_role_action: "prerequisites,user,install,logging"
+
+  roles:
+    - role: ../../..
+
+  post_tasks:
+    - name: 📊 Converge | Display role execution summary
+      ansible.builtin.debug:
+        msg:
+          - "✅ GitHub Runner role execution completed"
+          - "🔧 Installation: Completed"
+          - "⚙️ Configuration: Applied"
+          - "📁 Logging: Configured"
+          - "👤 User: Created"
