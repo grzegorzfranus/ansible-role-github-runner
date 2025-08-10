@@ -17,3 +17,6 @@ venv.bak/
 
 # ignore Mac
 .DS_Store
+
+#asible
+.ansible/
