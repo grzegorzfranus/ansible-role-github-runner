@@ -53,7 +53,7 @@
   postrotate
     {% if github_runner_rsyslog_enabled | default(true) %}
     # Reload rsyslog service for log file reopening (RSyslog approach)
-    /bin/systemctl reload rsyslog.service > /dev/null 2>&1 || true
+    /bin/systemctl reload rsyslog.service > /dev/null 2>&1 || /bin/systemctl restart rsyslog.service > /dev/null 2>&1 || true
     {% else %}
     # Reload systemd service to reopen log files (direct file approach)
     /bin/systemctl reload-or-restart {{ github_runner_service_name }}.service > /dev/null 2>&1 || true
