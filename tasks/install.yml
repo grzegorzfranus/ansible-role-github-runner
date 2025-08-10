@@ -193,6 +193,76 @@
     - install
     - download
 
+- name: 🧪 GitHub Runner | install | Initialize checksum argument
+  ansible.builtin.set_fact:
+    _github_runner_checksum_arg: ""
+  tags:
+    - install
+    - download
+
+- name: 🔐 GitHub Runner | install | Fetch checksums file (when enabled)
+  ansible.builtin.get_url:
+    url: "{{ github_runner_download_base_url }}/{{ _github_runner_target_version }}/{{ github_runner_checksums_file }}"
+    dest: "{{ github_runner_temp_dir }}/{{ github_runner_checksums_file }}"
+    mode: "0644"
+    timeout: "{{ github_runner_download_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+  when: >
+    _github_runner_needs_installation | bool and
+    github_runner_verify_checksum | bool
+  tags:
+    - install
+    - download
+
+- name: 🔐 GitHub Runner | install | Parse expected checksum for the package (when enabled)
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep "{{ github_runner_package_name }}-{{ _github_runner_target_version.lstrip('v') }}.tar.gz" "{{ github_runner_temp_dir }}/{{ github_runner_checksums_file }}" | awk '{print $1}'
+  args:
+    executable: /bin/bash
+  register: _github_runner_checksum_grep
+  changed_when: false
+  when: >
+    _github_runner_needs_installation | bool and
+    github_runner_verify_checksum | bool
+  tags:
+    - install
+    - download
+
+- name: 🧪 GitHub Runner | install | Set expected checksum fact (when enabled)
+  ansible.builtin.set_fact:
+    _github_runner_expected_checksum: "{{ _github_runner_checksum_grep.stdout | trim }}"
+  when: >
+    _github_runner_needs_installation | bool and
+    github_runner_verify_checksum | bool
+  tags:
+    - install
+    - download
+
+- name: 🧪 GitHub Runner | install | Validate checksum was found (when enabled)
+  ansible.builtin.assert:
+    that:
+      - _github_runner_expected_checksum is defined
+      - _github_runner_expected_checksum | length > 0
+    fail_msg: "❌ Failed to find expected checksum for the runner package in {{ github_runner_checksums_file }}"
+    success_msg: "✅ Expected checksum found"
+  when: >
+    _github_runner_needs_installation | bool and
+    github_runner_verify_checksum | bool
+  tags:
+    - install
+    - verify
+
+- name: 🧪 GitHub Runner | install | Compose checksum argument (when enabled)
+  ansible.builtin.set_fact:
+    _github_runner_checksum_arg: "sha256:{{ _github_runner_expected_checksum }}"
+  when: >
+    _github_runner_needs_installation | bool and
+    github_runner_verify_checksum | bool
+  tags:
+    - install
+    - download
+
 - name: 📊 GitHub Runner | install | Display download information
   ansible.builtin.debug:
     msg:
@@ -215,6 +285,7 @@
     mode: "0644"
     timeout: "{{ github_runner_download_timeout }}"
     validate_certs: "{{ github_runner_verify_ssl }}"
+    checksum: "{{ _github_runner_checksum_arg if (_github_runner_checksum_arg | length) > 0 else omit }}"
   register: _github_runner_download_result
   when: >
     _github_runner_needs_installation | bool
@@ -237,7 +308,7 @@
   ansible.builtin.assert:
     that:
       - _github_runner_package_stat.stat.exists
-      - _github_runner_package_stat.stat.size > 1000000  # At least 1MB
+      - (_github_runner_package_stat.stat.size > 1000000) or not (github_runner_verify_checksum | bool)
     fail_msg: "❌ Downloaded package is invalid or corrupted"
     success_msg: "✅ Package downloaded successfully ({{ (_github_runner_package_stat.stat.size / 1024 / 1024) | round(1) }}MB)"
   when: >

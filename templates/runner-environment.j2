@@ -29,6 +29,10 @@ GITHUB_REPOSITORY="{{ github_runner_repository_url }}"
 RUNNER_ALLOW_RUNASROOT="0"
 RUNNER_EPHEMERAL="{{ 'true' if github_runner_ephemeral else 'false' }}"
 RUNNER_MAX_JOBS="{{ github_runner_max_jobs }}"
+# Optional: Tool cache to speed up language/tool installs
+{% if github_runner_tool_cache is defined and github_runner_tool_cache %}
+RUNNER_TOOL_CACHE="{{ github_runner_tool_cache }}"
+{% endif %}
 
 # Security Configuration
 {% if not github_runner_verify_ssl %}

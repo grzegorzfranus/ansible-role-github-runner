@@ -15,13 +15,16 @@
 # GitHub Runner service, providing comprehensive logging coverage.
 # =============================================================================
 
-# GitHub Runner standard logs
-# Match logs by syslog identifier and redirect to the main log file
-:programname, isequal, "{{ github_runner_syslog_identifier }}" {{ github_runner_log_dir }}/{{ github_runner_log_file }}
+# Logging rules for GitHub Runner using RainerScript syntax
+if ($programname == "{{ github_runner_syslog_identifier }}") then {
+  # Main log file for all messages
+  action(type="omfile" file="{{ github_runner_log_dir }}/{{ github_runner_log_file }}")
 
-# GitHub Runner error logs  
-# Filter error-level messages to a separate error log file
-:programname, isequal, "{{ github_runner_syslog_identifier }}" :omfile:${{ github_runner_log_dir }}/{{ github_runner_log_error_file }}
+  # Error-level messages (severity <= 3) to a dedicated error log file
+  if ($syslogseverity <= 3) then {
+    action(type="omfile" file="{{ github_runner_log_dir }}/{{ github_runner_log_error_file }}")
+  }
 
-# Stop processing these logs further to prevent duplication in main syslog
-& stop
+  # Stop further processing to avoid duplication in system logs
+  stop
+}

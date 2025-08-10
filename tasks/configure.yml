@@ -217,6 +217,7 @@
       --work "{{ github_runner_work_dir }}" \
       --unattended \
       --runasservice \
+      {{ '--disableupdate' if github_runner_disable_update else '' }} \
       {{ '--ephemeral' if github_runner_ephemeral else '' }} \
       {{ '--replace' if github_runner_replace else '' }} \
       {{ '--runnergroup "' + github_runner_group + '"' if github_runner_group else '' }}

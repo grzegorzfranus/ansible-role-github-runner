@@ -141,6 +141,13 @@
     fail_msg: "❌ Either access_token or token_direct must be provided for runner registration"
     success_msg: "✅ Authentication token configuration is valid"
 
+- name: 🧪 GitHub Runner | assert | Validate access token format when provided
+  ansible.builtin.assert:
+    that:
+      - github_runner_access_token | length == 0 or github_runner_access_token is match(github_runner_valid_token_pattern)
+    fail_msg: "❌ Invalid GitHub personal access token format. Expected to start with gh[pous]_ and contain 36-255 alphanumerics"
+    success_msg: "✅ Access token format looks valid"
+
 - name: 🧪 GitHub Runner | assert | Validate runner name
   ansible.builtin.assert:
     that:
@@ -197,12 +204,22 @@
 - name: 🧪 GitHub Runner | assert | Validate user UID
   ansible.builtin.assert:
     that:
-      - github_runner_user_uid is defined
       - github_runner_user_uid is number
       - github_runner_user_uid >= 1000
       - github_runner_user_uid <= 65533
     fail_msg: "❌ Invalid user UID '{{ github_runner_user_uid | default('undefined') }}'. Must be between 1000 and 65533"
     success_msg: "✅ User UID is valid: {{ github_runner_user_uid }}"
+  when: github_runner_user_uid is not none
+
+- name: 🧪 GitHub Runner | assert | Validate group GID
+  ansible.builtin.assert:
+    that:
+      - github_runner_group_gid is number
+      - github_runner_group_gid >= 1000
+      - github_runner_group_gid <= 65533
+    fail_msg: "❌ Invalid group GID '{{ github_runner_group_gid | default('undefined') }}'. Must be between 1000 and 65533"
+    success_msg: "✅ Group GID is valid: {{ github_runner_group_gid }}"
+  when: github_runner_group_gid is not none
 
 - name: 🧪 GitHub Runner | assert | Validate sudo configuration
   ansible.builtin.assert:

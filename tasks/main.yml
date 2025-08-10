@@ -82,6 +82,7 @@
 - name: 📦 GitHub Runner | install | Install GitHub Runner package
   ansible.builtin.include_tasks: install.yml
   when: >
+    github_runner_state == 'present' and
     github_runner_role_action in ['all', 'install'] and
     github_runner_enabled | default(true)
   tags:
@@ -107,6 +108,7 @@
 - name: 🔧 GitHub Runner | configure | Configure GitHub Runner
   ansible.builtin.include_tasks: configure.yml
   when: >
+    github_runner_state == 'present' and
     github_runner_role_action in ['all', 'configure'] and
     github_runner_enabled | default(true)
   tags:
@@ -119,6 +121,7 @@
 - name: 🚀 GitHub Runner | service | Configure systemd service
   ansible.builtin.include_tasks: service.yml
   when: >
+    github_runner_state == 'present' and
     github_runner_role_action in ['all', 'service'] and
     github_runner_enabled | default(true)
   tags:
@@ -131,9 +134,21 @@
 - name: 🧪 GitHub Runner | verify | Verify GitHub Runner installation
   ansible.builtin.include_tasks: verify.yml
   when: >
+    github_runner_state == 'present' and
     github_runner_role_action in ['all', 'configure', 'service'] and
     github_runner_enabled | default(true) and
     github_runner_debug | default(false)
   tags:
     - verify
     - check
+
+# -----------------------------------------------------------------------------
+# 10. Uninstall Flow (when state=absent)
+# -----------------------------------------------------------------------------
+- name: 🗑️ GitHub Runner | remove | Uninstall GitHub Runner
+  ansible.builtin.include_tasks: remove.yml
+  when: >
+    github_runner_state == 'absent'
+  tags:
+    - cleanup
+    - remove

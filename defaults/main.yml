@@ -24,6 +24,9 @@
 # Options: 'all', 'prerequisites', 'user', 'install', 'logging', 'configure', 'service'
 github_runner_role_action: "all"
 
+# Desired state of the runner installation: 'present' or 'absent'
+github_runner_state: "present"
+
 # Enable/disable GitHub Runner installation
 github_runner_enabled: true
 
@@ -111,8 +114,8 @@ github_runner_create_user: true
 # User configuration
 github_runner_user: "github-runner"
 github_runner_user_group: "github-runner"
-github_runner_user_uid: 1001
-github_runner_group_gid: 1001
+github_runner_user_uid: null
+github_runner_group_gid: null
 github_runner_user_home: "/home/{{ github_runner_user }}"
 github_runner_user_shell: "/bin/bash"
 github_runner_user_system: true
@@ -212,6 +215,14 @@ github_runner_no_proxy: ""   # Comma-separated list of hosts to bypass proxy
 github_runner_verify_ssl: true
 
 # -----------------------------------------------------------------------------
+# 7a. Download Integrity
+# -----------------------------------------------------------------------------
+# Verify downloaded runner package against release checksums
+github_runner_verify_checksum: false
+# Name of the checksum file in GitHub releases
+github_runner_checksums_file: "sha256sums.txt"
+
+# -----------------------------------------------------------------------------
 # 7. Advanced Options
 # -----------------------------------------------------------------------------
 # Advanced configuration options
@@ -233,6 +244,9 @@ github_runner_custom_env: {}
 # Hook scripts (optional - will be set as environment variables if provided)
 github_runner_pre_job_hook: ""  # Script to run before each job
 github_runner_post_job_hook: "" # Script to run after each job
+
+# Optional: Tool cache directory path (e.g., '/opt/actions-runner/_toolcache')
+github_runner_tool_cache: ""
 
 # Package dependencies
 github_runner_dependencies:

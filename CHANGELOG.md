@@ -5,6 +5,25 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2025-08-10
+
+### Added ✅
+- Token validation and secrecy: assert PAT format with regex; ensured sensitive operations keep `no_log: true`.
+- Runner update control: added `--disableupdate` flag support via `github_runner_disable_update`.
+- Idempotent uninstall: new `github_runner_state: present|absent` with `tasks/remove.yml` to unregister and clean files.
+- UID/GID defaults: `github_runner_user_uid` and `github_runner_group_gid` now default to `null` and are omitted unless set.
+- Download integrity: optional checksum verification (`github_runner_verify_checksum`, `github_runner_checksums_file`) and checksum parsing.
+- RSyslog handler: switched to graceful `state: reloaded` for rsyslog changes.
+- Documentation: README updated with Vault guidance, new variables, and checksum usage.
+
+### Changed 🔄
+- Runner environment: optional `RUNNER_TOOL_CACHE` variable support via `github_runner_tool_cache`.
+
+### Fixed 🔧
+- RSyslog template now uses valid RainerScript and severity filter for error logs.
+
+---
+
 ## [1.0.6] - 2025-06-30
 
 ### Added ✅

@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Uninstall
+# =============================================================================
+# Idempotently stop service, unregister runner, and remove files when
+# github_runner_state == 'absent'.
+# =============================================================================
+
+- name: 🛑 GitHub Runner | remove | Stop service if present
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ github_runner_service_name }}"
+    state: stopped
+  failed_when: false
+  tags: [remove, service]
+
+- name: 🔍 GitHub Runner | remove | Check installation directory
+  ansible.builtin.stat:
+    path: "{{ github_runner_install_dir }}"
+  register: _github_runner_remove_install_dir
+  tags: [remove, check]
+
+- name: 🗑️ GitHub Runner | remove | Unregister runner if configured
+  become: true
+  ansible.builtin.shell: |
+    cd "{{ github_runner_install_dir }}"
+    if [ -x ./config.sh ]; then
+      sudo -u "{{ github_runner_user }}" ./config.sh remove --unattended || true
+    fi
+  args:
+    executable: /bin/bash
+  when: >
+    _github_runner_remove_install_dir.stat.exists
+  no_log: true
+  changed_when: false
+  failed_when: false
+  tags: [remove]
+
+- name: 🧹 GitHub Runner | remove | Remove systemd service file
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_systemd_service_path }}"
+    state: absent
+  notify: reload systemd
+  tags: [remove, systemd]
+
+- name: 🧹 GitHub Runner | remove | Remove systemd override directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_systemd_override_dir }}"
+    state: absent
+  notify: reload systemd
+  tags: [remove, systemd]
+
+- name: 🧹 GitHub Runner | remove | Remove installation directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_install_dir }}"
+    state: absent
+  when: >
+    _github_runner_remove_install_dir.stat.exists
+  tags: [remove]
+
+- name: 🧹 GitHub Runner | remove | Remove logrotate configuration
+  become: true
+  ansible.builtin.file:
+    path: "/etc/logrotate.d/github-runner"
+    state: absent
+  tags: [remove]
+
+- name: 🧹 GitHub Runner | remove | Remove rsyslog configuration (if present)
+  become: true
+  ansible.builtin.file:
+    path: "/etc/rsyslog.d/{{ github_runner_rsyslog_config_file }}"
+    state: absent
+  notify: 🔄 GitHub Runner | handlers | Restart rsyslog
+  tags: [remove]
+
+

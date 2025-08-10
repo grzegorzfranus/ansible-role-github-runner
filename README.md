@@ -165,6 +165,19 @@ ansible-galaxy collection install community.crypto
 ansible-playbook -i inventory github-runner-setup.yml
 ```
 
+### 7. Uninstall the runner
+
+```yaml
+---
+- name: Uninstall GitHub Runner
+  hosts: runners
+  become: true
+  roles:
+    - role: grzegorzfranus.github_runner
+      vars:
+        github_runner_state: "absent"
+```
+
 ## ⚙️ Configuration
 
 ### Default Configuration
@@ -216,6 +229,10 @@ Customize for specific requirements:
     # Security Configuration
     github_runner_verify_ssl: true
     github_runner_disable_telemetry: true
+      
+      # Download integrity (optional)
+      github_runner_verify_checksum: true
+      github_runner_checksums_file: "sha256sums.txt"
     
     # Custom Environment
     github_runner_custom_env:
@@ -265,6 +282,7 @@ Customize for specific requirements:
 | `github_runner_replace` | Replace existing runner with same name | `false` |
 | `github_runner_ephemeral` | Runner as ephemeral (removed after job completion) | `false` |
 | `github_runner_disable_update` | Disable automatic runner updates | `false` |
+| `github_runner_state` | Desired state of runner: `present` or `absent` | `present` |
 
 ### User Management
 
@@ -273,8 +291,9 @@ Customize for specific requirements:
 | `github_runner_create_user` | Create a dedicated user for GitHub Runner | `true` |
 | `github_runner_user` | User name | `"github-runner"` |
 | `github_runner_user_group` | User group | `"github-runner"` |
-| `github_runner_user_uid` | User UID | `1001` |
-| `github_runner_group_gid` | Group GID | `1001` |
+| `github_runner_user_uid` | User UID | `null` (autoselect) |
+| `github_runner_group_gid` | Group GID | `null` (autoselect) |
+| `github_runner_tool_cache` | Optional tool cache directory (RUNNER_TOOL_CACHE) | `""` |
 | `github_runner_user_home` | User home directory | `"/home/{{ github_runner_user }}"` |
 | `github_runner_user_shell` | User shell | `"/bin/bash"` |
 | `github_runner_user_system` | Create as system user | `true` |
@@ -352,6 +371,8 @@ Customize for specific requirements:
 |----------|-------------|---------|
 | `github_runner_install_dir_mode` | Installation directory permissions | `"0755"` |
 | `github_runner_verify_ssl` | Enable SSL certificate verification | `true` |
+| `github_runner_verify_checksum` | Verify download against checksums | `false` |
+| `github_runner_checksums_file` | Checksum file name in releases | `"sha256sums.txt"` |
 | `github_runner_disable_telemetry` | Disable telemetry collection | `true` |
 | `github_runner_disable_analytics` | Disable analytics collection | `true` |
 | `github_runner_proxy_url` | HTTP proxy URL if needed | `""` |
@@ -432,6 +453,13 @@ sudo grep "github-runner" /var/log/syslog | tail -5
 - ✅ **Resource Limits**: Memory, CPU, and process limits to prevent resource exhaustion
 - ✅ **Network Security**: Proxy support and SSL verification controls
 - ✅ **Optional Sudo**: Configurable privilege escalation with logging
+
+#### Secrets handling
+- Store `github_runner_access_token` in Ansible Vault. Example:
+  - Create a vaulted variable file: `ansible-vault create group_vars/all/github_tokens.yml`
+  - Add: `github_runner_access_token: "ghp_xxx..."`
+  - Use with `--ask-vault-pass` or a vault password file.
+  - The role validates token format and never logs token values.
 
 ### Enhanced Security Configuration
 

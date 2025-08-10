@@ -22,7 +22,7 @@
   become: true
   ansible.builtin.group:
     name: "{{ github_runner_user_group }}"
-    gid: "{{ github_runner_group_gid }}"
+    gid: "{{ github_runner_group_gid if github_runner_group_gid is not none else omit }}"
     system: "{{ github_runner_user_system }}"
     state: present
   tags:
@@ -36,7 +36,7 @@
   become: true
   ansible.builtin.user:
     name: "{{ github_runner_user }}"
-    uid: "{{ github_runner_user_uid }}"
+    uid: "{{ github_runner_user_uid if github_runner_user_uid is not none else omit }}"
     group: "{{ github_runner_user_group }}"
     home: "{{ github_runner_user_home }}"
     shell: "{{ github_runner_user_shell }}"
