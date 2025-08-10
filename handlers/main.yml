@@ -46,20 +46,19 @@
     enabled: "{{ github_runner_service_enabled }}"
   listen: "start github runner"
 
-- name: 🔄 GitHub Runner | handlers | Reload rsyslog (fallback to restart)
+- name: 🔄 GitHub Runner | handlers | Try to reload rsyslog
   become: true
-  block:
-    - name: 🔄 Reload rsyslog
-      ansible.builtin.service:
-        name: rsyslog
-        state: reloaded
-    - name: ✅ Rsyslog reloaded
-      ansible.builtin.debug:
-        msg: "✅ Rsyslog reloaded successfully"
-      when: true
-  rescue:
-    - name: 🚀 Restart rsyslog (reload not supported)
-      ansible.builtin.service:
-        name: rsyslog
-        state: restarted
+  ansible.builtin.service:
+    name: rsyslog
+    state: reloaded
+  register: _rsyslog_reload
+  failed_when: false
+  listen: "🔄 GitHub Runner | handlers | Restart rsyslog"
+
+- name: 🚀 GitHub Runner | handlers | Restart rsyslog when reload unsupported
+  become: true
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+  when: _rsyslog_reload is failed or (_rsyslog_reload.failed | default(false))
   listen: "🔄 GitHub Runner | handlers | Restart rsyslog"
