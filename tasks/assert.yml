@@ -147,6 +147,9 @@
       - github_runner_access_token | length == 0 or github_runner_access_token is match(github_runner_valid_token_pattern)
     fail_msg: "❌ Invalid GitHub personal access token format. Expected to start with gh[pous]_ and contain 36-255 alphanumerics"
     success_msg: "✅ Access token format looks valid"
+  when: >
+    github_runner_access_token | length > 0 and
+    not (github_runner_test_mode | default(false))
 
 - name: 🧪 GitHub Runner | assert | Validate runner name
   ansible.builtin.assert:
