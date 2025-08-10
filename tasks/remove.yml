@@ -75,4 +75,3 @@
     state: absent
   notify: 🔄 GitHub Runner | handlers | Restart rsyslog
   tags: [remove]
-
