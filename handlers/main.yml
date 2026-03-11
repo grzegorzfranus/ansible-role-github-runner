@@ -17,13 +17,13 @@
 #   start github runner - Triggered when runner needs to be started
 # =============================================================================
 
-- name: 🔄 GitHub Runner | handlers | Reload systemd daemon
+- name: GitHub Runner | handlers | Reload systemd daemon
   become: true
   ansible.builtin.systemd:
     daemon_reload: true
   listen: "reload systemd"
 
-- name: 🔄 GitHub Runner | handlers | Restart GitHub Runner service
+- name: GitHub Runner | handlers | Restart GitHub Runner service
   become: true
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
@@ -31,14 +31,14 @@
     enabled: "{{ github_runner_service_enabled }}"
   listen: "restart github runner"
 
-- name: 🛑 GitHub Runner | handlers | Stop GitHub Runner service
+- name: GitHub Runner | handlers | Stop GitHub Runner service
   become: true
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
     state: stopped
   listen: "stop github runner"
 
-- name: 🚀 GitHub Runner | handlers | Start GitHub Runner service
+- name: GitHub Runner | handlers | Start GitHub Runner service
   become: true
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
@@ -46,19 +46,19 @@
     enabled: "{{ github_runner_service_enabled }}"
   listen: "start github runner"
 
-- name: 🔄 GitHub Runner | handlers | Try to reload rsyslog
+- name: GitHub Runner | handlers | Try to reload rsyslog
   become: true
   ansible.builtin.service:
     name: rsyslog
     state: reloaded
   register: _rsyslog_reload
   failed_when: false
-  listen: "🔄 GitHub Runner | handlers | Restart rsyslog"
+  listen: "restart rsyslog"
 
-- name: 🚀 GitHub Runner | handlers | Restart rsyslog when reload unsupported
+- name: GitHub Runner | handlers | Restart rsyslog when reload unsupported
   become: true
   ansible.builtin.service:
     name: rsyslog
     state: restarted
   when: _rsyslog_reload is failed or (_rsyslog_reload.failed | default(false))
-  listen: "🔄 GitHub Runner | handlers | Restart rsyslog"
+  listen: "restart rsyslog"

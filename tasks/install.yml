@@ -18,7 +18,7 @@
 # -----------------------------------------------------------------------------
 # 1. Installation Status Check
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | install | Check for existing installation
+- name: GitHub Runner | install | Check for existing installation
   ansible.builtin.stat:
     path: "{{ github_runner_config_script }}"
   register: _github_runner_existing_installation
@@ -26,7 +26,7 @@
     - install
     - check
 
-- name: 🔍 GitHub Runner | install | Check current runner version
+- name: GitHub Runner | install | Check current runner version
   ansible.builtin.shell: |
     set -o pipefail
     if [ -f "{{ github_runner_install_dir }}/bin/Runner.Listener" ]; then
@@ -44,13 +44,13 @@
     - install
     - check
 
-- name: 📊 GitHub Runner | install | Display current installation status
+- name: GitHub Runner | install | Display current installation status
   ansible.builtin.debug:
     msg:
-      - "📊 Current GitHub Runner Status:"
-      - "   📦 Installed: {{ 'Yes' if _github_runner_existing_installation.stat.exists else 'No' }}"
-      - "   🏷️ Version: {{ _github_runner_current_version.stdout if _github_runner_current_version.stdout != 'not_installed' else 'N/A' }}"
-      - "   🔄 Force Reinstall: {{ github_runner_force_reinstall }}"
+      - "Current GitHub Runner Status:"
+      - "Installed: {{ 'Yes' if _github_runner_existing_installation.stat.exists else 'No' }}"
+      - "Version: {{ _github_runner_current_version.stdout if _github_runner_current_version.stdout != 'not_installed' else 'N/A' }}"
+      - "Force Reinstall: {{ github_runner_force_reinstall }}"
   tags:
     - install
     - check
@@ -58,7 +58,7 @@
 # -----------------------------------------------------------------------------
 # 2. Version Determination
 # -----------------------------------------------------------------------------
-- name: 🌐 GitHub Runner | install | Get latest runner version from GitHub API
+- name: GitHub Runner | install | Get latest runner version from GitHub API
   ansible.builtin.uri:
     url: "{{ github_runner_latest_api_url }}"
     method: GET
@@ -73,7 +73,7 @@
     - install
     - version
 
-- name: 🧪 GitHub Runner | install | Mock latest version for test mode
+- name: GitHub Runner | install | Mock latest version for test mode
   ansible.builtin.set_fact:
     _github_runner_latest_release:
       json:
@@ -85,7 +85,7 @@
     - install
     - version
 
-- name: 🏷️ GitHub Runner | install | Set target version
+- name: GitHub Runner | install | Set target version
   ansible.builtin.set_fact:
     _github_runner_target_version: >-
       {{
@@ -96,14 +96,14 @@
     - install
     - version
 
-- name: 📊 GitHub Runner | install | Display version information
+- name: GitHub Runner | install | Display version information
   ansible.builtin.debug:
     msg:
-      - "🎯 GitHub Runner Version Information:"
-      - "   🔄 Requested: {{ github_runner_version }}"
-      - "   🎯 Target: {{ _github_runner_target_version }}"
-      - "   📦 Current: {{ _github_runner_current_version.stdout if _github_runner_current_version.stdout != 'not_installed' else 'Not Installed' }}"
-      - "   🧪 Test Mode: {{ github_runner_test_mode | default(false) }}"
+      - "GitHub Runner Version Information:"
+      - "Requested: {{ github_runner_version }}"
+      - "Target: {{ _github_runner_target_version }}"
+      - "Current: {{ _github_runner_current_version.stdout if _github_runner_current_version.stdout != 'not_installed' else 'Not Installed' }}"
+      - "Test Mode: {{ github_runner_test_mode | default(false) }}"
   tags:
     - install
     - version
@@ -111,7 +111,7 @@
 # -----------------------------------------------------------------------------
 # 3. Installation Decision
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | install | Normalize version strings for comparison
+- name: GitHub Runner | install | Normalize version strings for comparison
   ansible.builtin.set_fact:
     _github_runner_current_version_clean: "{{ _github_runner_current_version.stdout | regex_replace('^v', '') }}"
     _github_runner_target_version_clean: "{{ _github_runner_target_version | regex_replace('^v', '') }}"
@@ -119,24 +119,24 @@
     - install
     - check
 
-- name: 🔍 GitHub Runner | install | Debug version comparison (always show for troubleshooting)
+- name: GitHub Runner | install | Debug version comparison (always show for troubleshooting)
   ansible.builtin.debug:
     msg:
-      - "🔍 Version Comparison Debug:"
-      - "   📄 Config script path: {{ github_runner_config_script }}"
-      - "   📦 Installation exists: {{ _github_runner_existing_installation.stat.exists }}"
-      - "   🔄 Force reinstall: {{ github_runner_force_reinstall }}"
-      - "   📦 Current version (raw): '{{ _github_runner_current_version.stdout }}'"
-      - "   🎯 Target version (raw): '{{ _github_runner_target_version }}'"
-      - "   📦 Current version (clean): '{{ _github_runner_current_version_clean }}'"
-      - "   🎯 Target version (clean): '{{ _github_runner_target_version_clean }}'"
-      - "   ⚖️ Versions match: {{ _github_runner_current_version_clean == _github_runner_target_version_clean }}"
-      - "   🧪 Test mode: {{ github_runner_test_mode | default(false) }}"
+      - "Version Comparison Debug:"
+      - "Config script path: {{ github_runner_config_script }}"
+      - "Installation exists: {{ _github_runner_existing_installation.stat.exists }}"
+      - "Force reinstall: {{ github_runner_force_reinstall }}"
+      - "Current version (raw): '{{ _github_runner_current_version.stdout }}'"
+      - "Target version (raw): '{{ _github_runner_target_version }}'"
+      - "Current version (clean): '{{ _github_runner_current_version_clean }}'"
+      - "Target version (clean): '{{ _github_runner_target_version_clean }}'"
+      - "Versions match: {{ _github_runner_current_version_clean == _github_runner_target_version_clean }}"
+      - "Test mode: {{ github_runner_test_mode | default(false) }}"
   tags:
     - install
     - check
 
-- name: 🧪 GitHub Runner | install | Determine if installation is needed
+- name: GitHub Runner | install | Determine if installation is needed
   ansible.builtin.set_fact:
     _github_runner_needs_installation: >-
       {{
@@ -153,17 +153,17 @@
     - install
     - check
 
-- name: 📊 GitHub Runner | install | Display installation decision (always show for troubleshooting)
+- name: GitHub Runner | install | Display installation decision (always show for troubleshooting)
   ansible.builtin.debug:
     msg:
-      - "🎯 GitHub Runner Installation Decision:"
-      - "   📦 Installation needed: {{ _github_runner_needs_installation }}"
-      - "   🧪 Test mode: {{ github_runner_test_mode | default(false) }}"
-      - "   📝 Evaluation logic:"
-      - "     - Installation missing: {{ not _github_runner_existing_installation.stat.exists }}"
-      - "     - Force reinstall: {{ github_runner_force_reinstall }}"
-      - "     - Version mismatch (production only): {{ _github_runner_current_version_clean != _github_runner_target_version_clean and _github_runner_current_version.stdout != 'not_installed' }}"
-      - "   💡 In test mode: Skip version comparison, only check existence and force_reinstall"
+      - "GitHub Runner Installation Decision:"
+      - "Installation needed: {{ _github_runner_needs_installation }}"
+      - "Test mode: {{ github_runner_test_mode | default(false) }}"
+      - "Evaluation logic:"
+      - "- Installation missing: {{ not _github_runner_existing_installation.stat.exists }}"
+      - "- Force reinstall: {{ github_runner_force_reinstall }}"
+      - "- Version mismatch (production only): {{ _github_runner_current_version_clean != _github_runner_target_version_clean and _github_runner_current_version.stdout != 'not_installed' }}"
+      - "In test mode: Skip version comparison, only check existence and force_reinstall"
   tags:
     - install
     - check
@@ -171,7 +171,7 @@
 # -----------------------------------------------------------------------------
 # 4. Package Download (when needed)
 # -----------------------------------------------------------------------------
-- name: 📁 GitHub Runner | install | Create temporary download directory
+- name: GitHub Runner | install | Create temporary download directory
   become: true
   ansible.builtin.file:
     path: "{{ github_runner_temp_dir }}"
@@ -183,7 +183,7 @@
     - install
     - download
 
-- name: 🏷️ GitHub Runner | install | Set package download URL
+- name: GitHub Runner | install | Set package download URL
   ansible.builtin.set_fact:
     _github_runner_download_url: "{{ github_runner_download_base_url }}/{{ _github_runner_target_version }}/{{ github_runner_package_name }}-{{ _github_runner_target_version.lstrip('v') }}.tar.gz"
     _github_runner_package_file: "{{ github_runner_temp_dir }}/{{ github_runner_package_name }}-{{ _github_runner_target_version.lstrip('v') }}.tar.gz"
@@ -193,14 +193,14 @@
     - install
     - download
 
-- name: 🧪 GitHub Runner | install | Initialize checksum argument
+- name: GitHub Runner | install | Initialize checksum argument
   ansible.builtin.set_fact:
     _github_runner_checksum_arg: ""
   tags:
     - install
     - download
 
-- name: 🔐 GitHub Runner | install | Fetch checksums file (when enabled)
+- name: GitHub Runner | install | Fetch checksums file (when enabled)
   ansible.builtin.get_url:
     url: "{{ github_runner_download_base_url }}/{{ _github_runner_target_version }}/{{ github_runner_checksums_file }}"
     dest: "{{ github_runner_temp_dir }}/{{ github_runner_checksums_file }}"
@@ -214,7 +214,7 @@
     - install
     - download
 
-- name: 🔐 GitHub Runner | install | Parse expected checksum for the package (when enabled)
+- name: GitHub Runner | install | Parse expected checksum for the package (when enabled)
   ansible.builtin.shell: |
     set -o pipefail
     grep "{{ github_runner_package_name }}-{{ _github_runner_target_version.lstrip('v') }}.tar.gz" "{{ github_runner_temp_dir }}/{{ github_runner_checksums_file }}" | awk '{print $1}'
@@ -229,7 +229,7 @@
     - install
     - download
 
-- name: 🧪 GitHub Runner | install | Set expected checksum fact (when enabled)
+- name: GitHub Runner | install | Set expected checksum fact (when enabled)
   ansible.builtin.set_fact:
     _github_runner_expected_checksum: "{{ _github_runner_checksum_grep.stdout | trim }}"
   when: >
@@ -239,13 +239,13 @@
     - install
     - download
 
-- name: 🧪 GitHub Runner | install | Validate checksum was found (when enabled)
+- name: GitHub Runner | install | Validate checksum was found (when enabled)
   ansible.builtin.assert:
     that:
       - _github_runner_expected_checksum is defined
       - _github_runner_expected_checksum | length > 0
-    fail_msg: "❌ Failed to find expected checksum for the runner package in {{ github_runner_checksums_file }}"
-    success_msg: "✅ Expected checksum found"
+    fail_msg: "Failed to find expected checksum for the runner package in {{ github_runner_checksums_file }}"
+    success_msg: "Expected checksum found"
   when: >
     _github_runner_needs_installation | bool and
     github_runner_verify_checksum | bool
@@ -253,7 +253,7 @@
     - install
     - verify
 
-- name: 🧪 GitHub Runner | install | Compose checksum argument (when enabled)
+- name: GitHub Runner | install | Compose checksum argument (when enabled)
   ansible.builtin.set_fact:
     _github_runner_checksum_arg: "sha256:{{ _github_runner_expected_checksum }}"
   when: >
@@ -263,21 +263,21 @@
     - install
     - download
 
-- name: 📊 GitHub Runner | install | Display download information
+- name: GitHub Runner | install | Display download information
   ansible.builtin.debug:
     msg:
-      - "📦 GitHub Runner Download Information:"
-      - "   🌐 URL: {{ _github_runner_download_url }}"
-      - "   📁 File: {{ _github_runner_package_file }}"
-      - "   🏗️ Architecture: {{ github_runner_architecture }}"
-      - "   🐧 OS: {{ github_runner_os }}"
+      - "GitHub Runner Download Information:"
+      - "URL: {{ _github_runner_download_url }}"
+      - "File: {{ _github_runner_package_file }}"
+      - "Architecture: {{ github_runner_architecture }}"
+      - "OS: {{ github_runner_os }}"
   when: >
     _github_runner_needs_installation | bool
   tags:
     - install
     - download
 
-- name: ⬇️ GitHub Runner | install | Download GitHub Runner package
+- name: GitHub Runner | install | Download GitHub Runner package
   become: true
   ansible.builtin.get_url:
     url: "{{ _github_runner_download_url }}"
@@ -293,7 +293,7 @@
     - install
     - download
 
-- name: ✅ GitHub Runner | install | Verify download completed
+- name: GitHub Runner | install | Verify download completed
   become: true
   ansible.builtin.stat:
     path: "{{ _github_runner_package_file }}"
@@ -304,13 +304,13 @@
     - install
     - verify
 
-- name: 🧪 GitHub Runner | install | Validate download integrity
+- name: GitHub Runner | install | Validate download integrity
   ansible.builtin.assert:
     that:
       - _github_runner_package_stat.stat.exists
       - (_github_runner_package_stat.stat.size > 1000000) or not (github_runner_verify_checksum | bool)
-    fail_msg: "❌ Downloaded package is invalid or corrupted"
-    success_msg: "✅ Package downloaded successfully ({{ (_github_runner_package_stat.stat.size / 1024 / 1024) | round(1) }}MB)"
+    fail_msg: "Downloaded package is invalid or corrupted"
+    success_msg: "Package downloaded successfully ({{ (_github_runner_package_stat.stat.size / 1024 / 1024) | round(1) }}MB)"
   when: >
     _github_runner_needs_installation | bool
   tags:
@@ -320,7 +320,7 @@
 # -----------------------------------------------------------------------------
 # 5. Stop Existing Service (if running)
 # -----------------------------------------------------------------------------
-- name: 🛑 GitHub Runner | install | Stop existing runner service
+- name: GitHub Runner | install | Stop existing runner service
   become: true
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
@@ -336,10 +336,10 @@
 # -----------------------------------------------------------------------------
 # 6. Package Extraction and Installation
 # -----------------------------------------------------------------------------
-- name: 🗂️ GitHub Runner | install | Backup existing installation
+- name: GitHub Runner | install | Backup existing installation
   become: true
   ansible.builtin.command:
-    cmd: "cp -r {{ github_runner_install_dir }} {{ github_runner_install_dir }}.backup.{{ ansible_date_time.epoch }}"
+    cmd: "cp -r {{ github_runner_install_dir }} {{ github_runner_install_dir }}.backup.{{ ansible_facts['date_time']['epoch'] }}"
   when: >
     _github_runner_needs_installation | bool and
     _github_runner_existing_installation.stat.exists and
@@ -350,7 +350,7 @@
     - install
     - backup
 
-- name: 🧹 GitHub Runner | install | Clean installation directory
+- name: GitHub Runner | install | Clean installation directory
   become: true
   ansible.builtin.file:
     path: "{{ github_runner_install_dir }}"
@@ -362,7 +362,7 @@
     - install
     - cleanup
 
-- name: 📁 GitHub Runner | install | Ensure installation directory exists
+- name: GitHub Runner | install | Ensure installation directory exists
   become: true
   ansible.builtin.file:
     path: "{{ github_runner_install_dir }}"
@@ -376,7 +376,7 @@
     - install
     - directories
 
-- name: 📦 GitHub Runner | install | Extract GitHub Runner package
+- name: GitHub Runner | install | Extract GitHub Runner package
   become: true
   ansible.builtin.unarchive:
     src: "{{ _github_runner_package_file }}"
@@ -394,7 +394,7 @@
 # -----------------------------------------------------------------------------
 # 7. File Permissions Setup
 # -----------------------------------------------------------------------------
-- name: 🔒 GitHub Runner | install | Set installation directory ownership
+- name: GitHub Runner | install | Set installation directory ownership
   become: true
   ansible.builtin.file:
     path: "{{ github_runner_install_dir }}"
@@ -407,7 +407,7 @@
     - install
     - permissions
 
-- name: 🔒 GitHub Runner | install | Set executable permissions on runner scripts
+- name: GitHub Runner | install | Set executable permissions on runner scripts
   become: true
   ansible.builtin.file:
     path: "{{ item }}"
@@ -426,7 +426,7 @@
 # -----------------------------------------------------------------------------
 # 8. Installation Verification
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | install | Verify installation files
+- name: GitHub Runner | install | Verify installation files
   ansible.builtin.stat:
     path: "{{ item }}"
   register: _github_runner_installation_files
@@ -440,13 +440,13 @@
     - install
     - verify
 
-- name: 🧪 GitHub Runner | install | Validate installation completeness
+- name: GitHub Runner | install | Validate installation completeness
   ansible.builtin.assert:
     that:
       - item.stat.exists
       - item.stat.executable
-    fail_msg: "❌ Required file {{ item.item }} is missing or not executable"
-    success_msg: "✅ Required file {{ item.item }} is present and executable"
+    fail_msg: "Required file {{ item.item }} is missing or not executable"
+    success_msg: "Required file {{ item.item }} is present and executable"
   loop: "{{ _github_runner_installation_files.results }}"
   when: >
     _github_runner_needs_installation | bool
@@ -454,7 +454,7 @@
     - install
     - verify
 
-- name: 🏷️ GitHub Runner | install | Get installed version
+- name: GitHub Runner | install | Get installed version
   ansible.builtin.shell: |
     set -o pipefail
     cd "{{ github_runner_install_dir }}"
@@ -474,7 +474,7 @@
 # -----------------------------------------------------------------------------
 # 9. Cleanup
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | install | Check temporary files for cleanup
+- name: GitHub Runner | install | Check temporary files for cleanup
   ansible.builtin.stat:
     path: "{{ item }}"
   register: _github_runner_temp_files_check
@@ -489,7 +489,7 @@
     - install
     - cleanup
 
-- name: 🧹 GitHub Runner | install | Clean up temporary files
+- name: GitHub Runner | install | Clean up temporary files
   become: true
   ansible.builtin.file:
     path: "{{ item.item }}"
@@ -507,17 +507,17 @@
 # -----------------------------------------------------------------------------
 # 10. Installation Summary
 # -----------------------------------------------------------------------------
-- name: 📊 GitHub Runner | install | Display installation summary
+- name: GitHub Runner | install | Display installation summary
   ansible.builtin.debug:
     msg:
-      - "🎯 GitHub Runner Installation Summary:"
-      - "   📦 Action: {{ 'Installed' if _github_runner_needs_installation else 'Skipped (already installed)' }}"
-      - "   🏷️ Version: {{ _github_runner_installed_version.stdout if _github_runner_needs_installation else _github_runner_current_version.stdout }}"
-      - "   📁 Location: {{ github_runner_install_dir }}"
-      - "   👤 Owner: {{ github_runner_user }}:{{ github_runner_user_group }}"
-      - "   🔒 Permissions: {{ github_runner_install_dir_mode }}"
-      - "   🧹 Cleanup: {{ 'Completed' if github_runner_cleanup else 'Skipped' }}"
-      - "   ✅ Installation {{ 'completed successfully' if _github_runner_needs_installation else 'verified' }}"
+      - "GitHub Runner Installation Summary:"
+      - "Action: {{ 'Installed' if _github_runner_needs_installation else 'Skipped (already installed)' }}"
+      - "Version: {{ _github_runner_installed_version.stdout if _github_runner_needs_installation else _github_runner_current_version.stdout }}"
+      - "Location: {{ github_runner_install_dir }}"
+      - "Owner: {{ github_runner_user }}:{{ github_runner_user_group }}"
+      - "Permissions: {{ github_runner_install_dir_mode }}"
+      - "Cleanup: {{ 'Completed' if github_runner_cleanup else 'Skipped' }}"
+      - "Installation {{ 'completed successfully' if _github_runner_needs_installation else 'verified' }}"
   tags:
     - install
     - summary

@@ -21,7 +21,7 @@
 # -----------------------------------------------------------------------------
 # 1. OS-Specific Variables
 # -----------------------------------------------------------------------------
-- name: 📂 GitHub Runner | include_vars | Gather OS specific variables
+- name: GitHub Runner | include_vars | Gather OS specific variables
   ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
   vars:
     params:
@@ -43,7 +43,7 @@
 # -----------------------------------------------------------------------------
 # 2. Variable Validation
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | assert | Validate role variables and requirements
+- name: GitHub Runner | assert | Validate role variables and requirements
   ansible.builtin.include_tasks: assert.yml
   run_once: true
   tags:
@@ -54,7 +54,7 @@
 # -----------------------------------------------------------------------------
 # 3. System Prerequisites
 # -----------------------------------------------------------------------------
-- name: 🛠️ GitHub Runner | prerequisites | Verify system prerequisites
+- name: GitHub Runner | prerequisites | Verify system prerequisites
   ansible.builtin.include_tasks: prerequisites.yml
   when: >
     github_runner_role_action in ['all', 'prerequisites'] and
@@ -66,7 +66,7 @@
 # -----------------------------------------------------------------------------
 # 4. User Management
 # -----------------------------------------------------------------------------
-- name: 👤 GitHub Runner | user | Create dedicated system user
+- name: GitHub Runner | user | Create dedicated system user
   ansible.builtin.include_tasks: user.yml
   when: >
     github_runner_role_action in ['all', 'user'] and
@@ -79,7 +79,7 @@
 # -----------------------------------------------------------------------------
 # 5. Package Installation
 # -----------------------------------------------------------------------------
-- name: 📦 GitHub Runner | install | Install GitHub Runner package
+- name: GitHub Runner | install | Install GitHub Runner package
   ansible.builtin.include_tasks: install.yml
   when: >
     github_runner_state == 'present' and
@@ -92,7 +92,7 @@
 # -----------------------------------------------------------------------------
 # 6. Logging Configuration
 # -----------------------------------------------------------------------------
-- name: 📁 GitHub Runner | logging | Configure dedicated logging
+- name: GitHub Runner | logging | Configure dedicated logging
   ansible.builtin.include_tasks: logging.yml
   when: >
     github_runner_role_action in ['all', 'logging'] and
@@ -105,7 +105,7 @@
 # -----------------------------------------------------------------------------
 # 7. Runner Configuration
 # -----------------------------------------------------------------------------
-- name: 🔧 GitHub Runner | configure | Configure GitHub Runner
+- name: GitHub Runner | configure | Configure GitHub Runner
   ansible.builtin.include_tasks: configure.yml
   when: >
     github_runner_state == 'present' and
@@ -118,7 +118,7 @@
 # -----------------------------------------------------------------------------
 # 8. Service Management
 # -----------------------------------------------------------------------------
-- name: 🚀 GitHub Runner | service | Configure systemd service
+- name: GitHub Runner | service | Configure systemd service
   ansible.builtin.include_tasks: service.yml
   when: >
     github_runner_state == 'present' and
@@ -131,7 +131,7 @@
 # -----------------------------------------------------------------------------
 # 9. Installation Verification
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | verify | Verify GitHub Runner installation
+- name: GitHub Runner | verify | Verify GitHub Runner installation
   ansible.builtin.include_tasks: verify.yml
   when: >
     github_runner_state == 'present' and
@@ -145,7 +145,7 @@
 # -----------------------------------------------------------------------------
 # 10. Uninstall Flow (when state=absent)
 # -----------------------------------------------------------------------------
-- name: 🗑️ GitHub Runner | remove | Uninstall GitHub Runner
+- name: GitHub Runner | remove | Uninstall GitHub Runner
   ansible.builtin.include_tasks: remove.yml
   when: >
     github_runner_state == 'absent'

@@ -17,7 +17,7 @@
 # -----------------------------------------------------------------------------
 # 1. Runner Scope and URL Determination
 # -----------------------------------------------------------------------------
-- name: 🎯 GitHub Runner | configure | Determine runner scope and target URL
+- name: GitHub Runner | configure | Determine runner scope and target URL
   ansible.builtin.set_fact:
     _github_runner_scope: >-
       {{
@@ -39,17 +39,17 @@
     - configure
     - setup
 
-- name: 📊 GitHub Runner | configure | Display runner configuration
+- name: GitHub Runner | configure | Display runner configuration
   ansible.builtin.debug:
     msg:
-      - "🎯 GitHub Runner Configuration:"
-      - "   🔗 Scope: {{ _github_runner_scope }}"
-      - "   🌐 Target URL: {{ _github_runner_target_url }}"
-      - "   🏷️ Name: {{ github_runner_name }}"
-      - "   🏃 Labels: {{ github_runner_labels }}"
-      - "   👥 Group: {{ github_runner_group if github_runner_group else 'default' }}"
-      - "   💨 Ephemeral: {{ github_runner_ephemeral }}"
-      - "   🔄 Replace: {{ github_runner_replace }}"
+      - "GitHub Runner Configuration:"
+      - "Scope: {{ _github_runner_scope }}"
+      - "Target URL: {{ _github_runner_target_url }}"
+      - "Name: {{ github_runner_name }}"
+      - "Labels: {{ github_runner_labels }}"
+      - "Group: {{ github_runner_group if github_runner_group else 'default' }}"
+      - "Ephemeral: {{ github_runner_ephemeral }}"
+      - "Replace: {{ github_runner_replace }}"
   tags:
     - configure
     - info
@@ -57,7 +57,7 @@
 # -----------------------------------------------------------------------------
 # 2. Registration Token Acquisition (if needed)
 # -----------------------------------------------------------------------------
-- name: 🔑 GitHub Runner | configure | Get repository registration token
+- name: GitHub Runner | configure | Get repository registration token
   ansible.builtin.uri:
     url: >-
       {{ github_runner_api_base_url }}/repos/{{
@@ -82,7 +82,7 @@
     - configure
     - token
 
-- name: 🔑 GitHub Runner | configure | Get organization registration token
+- name: GitHub Runner | configure | Get organization registration token
   ansible.builtin.uri:
     url: "{{ github_runner_api_base_url }}/orgs/{{ github_runner_organization }}/actions/runners/registration-token"
     method: POST
@@ -103,7 +103,7 @@
     - configure
     - token
 
-- name: 🏷️ GitHub Runner | configure | Set registration token
+- name: GitHub Runner | configure | Set registration token
   ansible.builtin.set_fact:
     _github_runner_registration_token: >-
       {{
@@ -122,12 +122,12 @@
     - configure
     - token
 
-- name: 🧪 GitHub Runner | configure | Validate registration token
+- name: GitHub Runner | configure | Validate registration token
   ansible.builtin.assert:
     that:
       - _github_runner_registration_token | length > 0
-    fail_msg: "❌ Failed to obtain registration token. Check your access token permissions and network connectivity."
-    success_msg: "✅ Registration token obtained successfully"
+    fail_msg: "Failed to obtain registration token. Check your access token permissions and network connectivity."
+    success_msg: "Registration token obtained successfully"
   tags:
     - configure
     - token
@@ -135,7 +135,7 @@
 # -----------------------------------------------------------------------------
 # 3. Existing Configuration Check
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | configure | Check for existing runner configuration
+- name: GitHub Runner | configure | Check for existing runner configuration
   ansible.builtin.stat:
     path: "{{ github_runner_runner_config_file }}"
   register: _github_runner_existing_config
@@ -143,7 +143,7 @@
     - configure
     - check
 
-- name: 🔍 GitHub Runner | configure | Check current runner registration
+- name: GitHub Runner | configure | Check current runner registration
   become: true
   ansible.builtin.shell: |
     if [ -f "{{ github_runner_runner_config_file }}" ]; then
@@ -158,13 +158,13 @@
     - configure
     - check
 
-- name: 📊 GitHub Runner | configure | Display current configuration status
+- name: GitHub Runner | configure | Display current configuration status
   ansible.builtin.debug:
     msg:
-      - "📊 Current Runner Configuration Status:"
-      - "   📝 Config File: {{ 'Exists' if _github_runner_existing_config.stat.exists else 'Missing' }}"
-      - "   🏷️ Current Name: {{ _github_runner_current_name.stdout if _github_runner_current_name.stdout != 'not_configured' else 'Not Configured' }}"
-      - "   🔄 Force Reconfigure: {{ github_runner_replace }}"
+      - "Current Runner Configuration Status:"
+      - "Config File: {{ 'Exists' if _github_runner_existing_config.stat.exists else 'Missing' }}"
+      - "Current Name: {{ _github_runner_current_name.stdout if _github_runner_current_name.stdout != 'not_configured' else 'Not Configured' }}"
+      - "Force Reconfigure: {{ github_runner_replace }}"
   tags:
     - configure
     - check
@@ -172,7 +172,7 @@
 # -----------------------------------------------------------------------------
 # 4. Runner Removal (if replacing)
 # -----------------------------------------------------------------------------
-- name: 🗑️ GitHub Runner | configure | Remove existing runner configuration
+- name: GitHub Runner | configure | Remove existing runner configuration
   become: true
   ansible.builtin.shell: |
     cd "{{ github_runner_install_dir }}"
@@ -191,7 +191,7 @@
 # -----------------------------------------------------------------------------
 # 5. Runner Configuration
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | configure | Determine if configuration is needed
+- name: GitHub Runner | configure | Determine if configuration is needed
   ansible.builtin.set_fact:
     _github_runner_needs_configuration: >-
       {{
@@ -203,7 +203,7 @@
     - configure
     - check
 
-- name: 🔧 GitHub Runner | configure | Configure GitHub Runner
+- name: GitHub Runner | configure | Configure GitHub Runner
   become: true
   ansible.builtin.shell: |
     cd "{{ github_runner_install_dir }}"
@@ -231,7 +231,7 @@
     - configure
     - register
 
-- name: 🧪 GitHub Runner | configure | Mock GitHub Runner configuration (test mode)
+- name: GitHub Runner | configure | Mock GitHub Runner configuration (test mode)
   ansible.builtin.set_fact:
     _github_runner_config_result:
       rc: 0
@@ -244,9 +244,9 @@
     - configure
     - register
 
-- name: ✅ GitHub Runner | configure | Verify runner configuration
+- name: GitHub Runner | configure | Verify runner configuration
   ansible.builtin.debug:
-    msg: "✅ GitHub Runner configured successfully"
+    msg: "GitHub Runner configured successfully"
   when: >
     _github_runner_needs_configuration | bool and
     _github_runner_config_result.rc == 0
@@ -254,9 +254,9 @@
     - configure
     - verify
 
-- name: ❌ GitHub Runner | configure | Handle configuration failure
+- name: GitHub Runner | configure | Handle configuration failure
   ansible.builtin.fail:
-    msg: "❌ GitHub Runner configuration failed: {{ _github_runner_config_result.stderr | default('Unknown error') }}"
+    msg: "GitHub Runner configuration failed: {{ _github_runner_config_result.stderr | default('Unknown error') }}"
   when: >
     _github_runner_needs_configuration | bool and
     _github_runner_config_result.rc != 0
@@ -267,7 +267,7 @@
 # -----------------------------------------------------------------------------
 # 6. Configuration Files Verification
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | configure | Verify configuration files exist
+- name: GitHub Runner | configure | Verify configuration files exist
   ansible.builtin.stat:
     path: "{{ item }}"
   register: _github_runner_config_files
@@ -280,13 +280,13 @@
     - configure
     - verify
 
-- name: 🧪 GitHub Runner | configure | Validate configuration files
+- name: GitHub Runner | configure | Validate configuration files
   ansible.builtin.assert:
     that:
       - item.stat.exists
       - item.stat.size > 0
-    fail_msg: "❌ Configuration file {{ item.item }} is missing or empty"
-    success_msg: "✅ Configuration file {{ item.item }} is present and valid"
+    fail_msg: "Configuration file {{ item.item }} is missing or empty"
+    success_msg: "Configuration file {{ item.item }} is present and valid"
   loop: "{{ _github_runner_config_files.results }}"
   when: >
     not (github_runner_test_mode | default(false))
@@ -297,7 +297,7 @@
 # -----------------------------------------------------------------------------
 # 7. Configuration Permissions
 # -----------------------------------------------------------------------------
-- name: 🔒 GitHub Runner | configure | Set configuration file permissions
+- name: GitHub Runner | configure | Set configuration file permissions
   become: true
   ansible.builtin.file:
     path: "{{ item }}"
@@ -316,7 +316,7 @@
 # -----------------------------------------------------------------------------
 # 8. Extract Runner Information
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | configure | Extract runner configuration details
+- name: GitHub Runner | configure | Extract runner configuration details
   become: true
   ansible.builtin.shell: |
     if [ -f "{{ github_runner_runner_config_file }}" ]; then
@@ -335,7 +335,7 @@
     - configure
     - info
 
-- name: 🧪 GitHub Runner | configure | Mock runner configuration details (test mode)
+- name: GitHub Runner | configure | Mock runner configuration details (test mode)
   ansible.builtin.set_fact:
     _github_runner_config_details:
       stdout_lines:
@@ -352,31 +352,31 @@
 # -----------------------------------------------------------------------------
 # 9. Configuration Summary
 # -----------------------------------------------------------------------------
-- name: 📊 GitHub Runner | configure | Display configuration summary
+- name: GitHub Runner | configure | Display configuration summary
   ansible.builtin.debug:
     msg:
-      - "🎯 GitHub Runner Configuration Summary:"
-      - "   📝 Action: {{ 'Configured' if _github_runner_needs_configuration else 'Skipped (already configured)' }}"
-      - "   🔗 Scope: {{ _github_runner_scope.title() }}"
-      - "   🌐 URL: {{ _github_runner_target_url }}"
-      - "   🏷️ Name: {{ github_runner_name }}"
-      - "   🏃 Labels: {{ github_runner_labels }}"
-      - "   📁 Work Dir: {{ github_runner_work_dir }}"
-      - "   💨 Ephemeral: {{ github_runner_ephemeral }}"
-      - "   👥 Group: {{ github_runner_group if github_runner_group else 'default' }}"
+      - "GitHub Runner Configuration Summary:"
+      - "Action: {{ 'Configured' if _github_runner_needs_configuration else 'Skipped (already configured)' }}"
+      - "Scope: {{ _github_runner_scope.title() }}"
+      - "URL: {{ _github_runner_target_url }}"
+      - "Name: {{ github_runner_name }}"
+      - "Labels: {{ github_runner_labels }}"
+      - "Work Dir: {{ github_runner_work_dir }}"
+      - "Ephemeral: {{ github_runner_ephemeral }}"
+      - "Group: {{ github_runner_group if github_runner_group else 'default' }}"
       - >-
-        🔒 Config Files: {{
+        Config Files: {{
           'Secured' if not (github_runner_test_mode | default(false)) and
           _github_runner_config_files.results | selectattr('stat.exists') | list | length == 2
           else 'Mocked (test mode)' if github_runner_test_mode | default(false)
           else 'Issue Detected'
         }}
-      - "   ✅ Configuration {{ 'completed successfully' if _github_runner_needs_configuration else 'verified' }}"
+      - "Configuration {{ 'completed successfully' if _github_runner_needs_configuration else 'verified' }}"
   tags:
     - configure
     - summary
 
-- name: 📋 GitHub Runner | configure | Display runner details
+- name: GitHub Runner | configure | Display runner details
   ansible.builtin.debug:
     msg: "{{ _github_runner_config_details.stdout_lines }}"
   when: >
