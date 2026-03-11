@@ -5,9 +5,32 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-03-12
+
+### Changed
+- Removed emojis from `README.md` and `CHANGELOG.md` documentation to match the enterprise-standard.
+- Updated `README.md` examples to use `ansible_facts['...']` syntax and bumped the stated minimum Ansible version to `2.20`.
+- Fixed outdated variable defaults descriptions in `README.md`.
+
+## [1.1.0] - 2026-03-12
+
+### Added
+- Refactored `molecule/` test suite files to be fully compliant with the latest strict linting rules
+- Replaced all legacy bare facts with the canonical `ansible_facts['...']` dictionary syntax
+
+### Changed
+- `min_ansible_version` in `meta/main.yml` updated from `2.15` to `2.20`
+- Removed all emojis from task names, debug messages, and role output to align with enterprise logging standards
+- Cleaned up residual whitespace across tasks and `molecule/` test suites resulting from emoji removal
+
+### Fixed
+- `INJECT_FACTS_AS_VARS` deprecation warnings: safely mitigated by abandoning top-level bare facts injection
+- Fixed minor formatting and trailing spaces flagged by `yamllint` across all default, task, and molecule files
+- Addressed `yaml[line-length]` and spacing inconsistencies in test verification files
+
 ## [1.0.7] - 2025-08-10
 
-### Added ✅
+### Added 
 - Token validation and secrecy: assert PAT format with regex; ensured sensitive operations keep `no_log: true`.
 - Runner update control: added `--disableupdate` flag support via `github_runner_disable_update`.
 - Idempotent uninstall: new `github_runner_state: present|absent` with `tasks/remove.yml` to unregister and clean files.
@@ -16,17 +39,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RSyslog handler: switched to graceful `state: reloaded` for rsyslog changes.
 - Documentation: README updated with Vault guidance, new variables, and checksum usage.
 
-### Changed 🔄
+### Changed 
 - Runner environment: optional `RUNNER_TOOL_CACHE` variable support via `github_runner_tool_cache`.
 
-### Fixed 🔧
+### Fixed 
 - RSyslog template now uses valid RainerScript and severity filter for error logs.
 
 ---
 
 ## [1.0.6] - 2025-06-30
 
-### Added ✅
+### Added 
 - **Comprehensive Molecule Testing Framework** - Professional test suite for role validation
   - Complete Molecule test configuration with Docker-based testing environment
   - Four-stage testing pipeline: prepare → converge → verify → destroy
@@ -45,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Automatic role import to Ansible Galaxy
     - Secure API key management through GitHub secrets
 
-### Test Suite Features 🧪
+### Test Suite Features 
 - **molecule.yml Configuration**:
   - Docker driver with privileged containers for systemd testing
   - Configurable distribution matrix using environment variables
@@ -77,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **File Permissions**: Validate directory and file permission settings (0755, 0644)
   - **Template Processing**: Verify configuration template generation and content
 
-### Technical Implementation 🔧
+### Technical Implementation 
 - **Test Environment Isolation**:
   - Separate test directories (`/opt/actions-runner-test`, `/var/log/github-runner-test`)
   - Dedicated test user (`test-runner`) with isolated configuration
@@ -96,7 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Proper test documentation with emoji status indicators
   - Enterprise-grade test organization and structure
 
-### CI/CD Features 🚀
+### CI/CD Features 
 - **Automated Quality Gates**:
   - Pull request validation with comprehensive testing
   - Branch protection through automated testing
@@ -119,7 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mock Testing Environment**: Safe testing without external dependencies
 - **Professional Standards**: Enterprise-grade testing and validation framework
 
-### Migration and Compatibility ✅
+### Migration and Compatibility 
 - **Zero Breaking Changes**: All existing functionality preserved
 - **Backward Compatibility**: Full compatibility with existing configurations
 - **Optional Testing**: Molecule tests don't affect production usage
@@ -129,7 +152,7 @@ This major enhancement establishes professional testing and CI/CD standards for 
 
 ## [1.0.5] - 2025-06-29
 
-### Added ✅
+### Added 
 - **Professional RSyslog Integration** - Implemented enterprise-grade logging with RSyslog support
   - Added RSyslog package installation and configuration
   - Created RSyslog template (`rsyslog/github-runner.conf.j2`) for GitHub Runner log routing
@@ -143,7 +166,7 @@ This major enhancement establishes professional testing and CI/CD standards for 
   - Automatic log ownership management (syslog:adm for RSyslog, github-runner:github-runner for legacy)
   - Intelligent logrotate service restart (rsyslog reload for RSyslog approach, service restart for legacy)
 
-### Configuration Variables 📊
+### Configuration Variables 
 - **RSyslog Integration**:
   - `github_runner_rsyslog_enabled` - Enable RSyslog integration (default: `true`)
   - `github_runner_syslog_identifier` - Syslog program identifier (default: `"github-runner"`)
@@ -151,7 +174,7 @@ This major enhancement establishes professional testing and CI/CD standards for 
   - `github_runner_log_user` - Log file owner for RSyslog (default: `"syslog"`)
   - `github_runner_log_group` - Log file group for RSyslog (default: `"adm"`)
 
-### Enhanced Features 🚀
+### Enhanced Features 
 - **Intelligent Service Configuration** - Systemd service template automatically adapts to logging approach
   - RSyslog enabled: StandardOutput/StandardError → journal (RSyslog handles file routing)
   - RSyslog disabled: StandardOutput/StandardError → direct file append (legacy mode)
@@ -163,7 +186,7 @@ This major enhancement establishes professional testing and CI/CD standards for 
   - Centralized log management capability with RSyslog
   - Structured logging support for integration with log analysis tools
 
-### Technical Implementation 🔧
+### Technical Implementation 
 - **Systemd Service Override** - Automatic configuration for RSyslog integration
   - Creates `/etc/systemd/system/[service].service.d/logging.conf` when RSyslog enabled
   - Sets StandardOutput=syslog, StandardError=syslog, SyslogIdentifier=[identifier]
@@ -184,14 +207,14 @@ This major enhancement establishes professional testing and CI/CD standards for 
   - Enhanced file structure documentation with RSyslog template
   - Updated usage examples with professional logging configuration
 
-### Backward Compatibility ✅
+### Backward Compatibility 
 - **No Breaking Changes** - Full backward compatibility maintained
   - RSyslog enabled by default but gracefully handles missing packages
   - Legacy direct file logging preserved when RSyslog disabled
   - Existing configurations continue to work without modification
   - Automatic migration to professional logging approach
 
-### Quality Assurance 🧪
+### Quality Assurance 
 - **Enhanced Error Handling** - Robust configuration with fallback mechanisms
   - Conditional RSyslog configuration based on availability
   - Automatic cleanup when features are disabled
@@ -202,14 +225,14 @@ This major enhancement brings enterprise-grade logging capabilities to the GitHu
 
 ## [1.0.4] - 2025-06-29
 
-### Fixed 🔧
+### Fixed 
 - **Logrotate Size Option** - Fixed "dict object has no attribute 'size'" error in logrotate template
   - Made the `size` option conditional in logrotate template (`{% if github_runner_logrotate_options.size is defined %}`)
   - Commented out the default `size: "100M"` option in `defaults/main.yml` to allow users to opt-in
   - Users can now exclude the size-based rotation entirely or add it back if needed
   - Resolves issue where logrotate would fail when size attribute was not properly defined
 
-### Changed 📝
+### Changed 
 - **Logrotate Configuration** - Size-based log rotation is now optional
   - Default behavior: logs rotate based on frequency (daily) and count (30) only
   - To enable size-based rotation: add `size: "100M"` to your `github_runner_logrotate_options` configuration
@@ -217,7 +240,7 @@ This major enhancement brings enterprise-grade logging capabilities to the GitHu
 
 ## [1.0.3] - 2025-06-29
 
-### Added ✅
+### Added 
 - **Dedicated Logging Support** - Added comprehensive logging functionality to redirect GitHub Runner logs to dedicated files
   - New logging task file (`logging.yml`) for log directory and file management
   - Configurable log directory path with default `/var/log/github-runner`
@@ -235,7 +258,7 @@ This major enhancement brings enterprise-grade logging capabilities to the GitHu
   - Proper file permissions and ownership after rotation
   - Service reload integration for log file reopening
 
-### Configuration Variables 📊
+### Configuration Variables 
 - **Logging Control**:
   - `github_runner_logging_enabled` - Enable/disable dedicated logging (default: `false`)
   - `github_runner_log_dir` - Log directory path (default: `/var/log/github-runner`)
@@ -261,7 +284,7 @@ This major enhancement brings enterprise-grade logging capabilities to the GitHu
   - `create_owner` - Owner for newly created log files (default: `github_runner_user`)
   - `create_group` - Group for newly created log files (default: `github_runner_user_group`)
 
-### Enhanced Features 🚀
+### Enhanced Features 
 - **Task Organization** - Added new `logging` tag and task group for selective execution
 - **Role Action Support** - Extended `github_runner_role_action` to include `logging` option
 - **Template System** - New logrotate template (`logrotate/github-runner.j2`) for log management
@@ -269,14 +292,14 @@ This major enhancement brings enterprise-grade logging capabilities to the GitHu
 - **Debug Output** - Enhanced debug mode with logging configuration status display
 - **Backward Compatibility** - Logging is disabled by default to maintain existing behavior
 
-### Technical Implementation 🔧
+### Technical Implementation 
 - **Conditional Output Redirection** - Systemd service uses `append:` directive for log files when enabled
 - **Permission Management** - Proper file and directory ownership with configurable permissions
 - **Service Reload** - Logrotate integration with service reload for log file reopening
 - **Error Handling** - Comprehensive error handling in logrotate configuration
 - **Security** - Log rotation runs under GitHub Runner user context for security
 
-### Usage Examples 💡
+### Usage Examples 
 ```yaml
 # Enable dedicated logging
 github_runner_logging_enabled: true
@@ -294,14 +317,14 @@ github_runner_logrotate_options:
 
 This enhancement addresses syslog noise by providing dedicated log file management while maintaining full backward compatibility with existing systemd journal logging.
 
-### Changed 📝
+### Changed 
 - **Logrotate Variable Structure** - Restructured logrotate configuration variables into a single `github_runner_logrotate_options` dictionary
   - Follows consistent pattern from other roles in the collection (tailscale, chrony)
   - Improved template structure with proper jinja2 headers and conditional blocks
   - Enhanced configurability with additional options like `missingok`, `notifempty`, `dateext`, etc.
   - **Breaking Change**: Individual logrotate variables consolidated into structured format
 
-### Migration Guide 🔄
+### Migration Guide 
 **Old format:**
 ```yaml
 github_runner_logrotate_enabled: true
@@ -321,7 +344,7 @@ github_runner_logrotate_options:
 
 ## [1.0.2] - 2025-06-25
 
-### Fixed 🔧
+### Fixed 
 - **Documentation Table Structure** - Removed unused "CI" column from README.md header table
   - Cleaned up repository status table by removing empty CI column that had no badge content
   - Updated table headers and separators to maintain proper markdown formatting
@@ -329,7 +352,7 @@ github_runner_logrotate_options:
 
 ## [1.0.1] - 2025-06-25
 
-### Fixed 🔧
+### Fixed 
 - **SSH Key Generation Directory Creation** - Fixed issue where SSH directory was not created before generating SSH keys
   - Reordered SSH tasks to set up verified paths before directory creation
   - Fixed `when` conditions syntax using proper Ansible YAML folded scalar format (`>`)
@@ -340,20 +363,20 @@ github_runner_logrotate_options:
   - Updated SSH key status logic to properly handle all SSH configuration methods (import, file, generation)
   - Enhanced debug output to show both original and verified SSH directory paths
 
-### Changed 📝
+### Changed 
 - **SSH Task Organization** - Improved task flow and conditional execution for SSH key management
   - Consolidated SSH path verification into shared setup tasks
   - Simplified conditional logic across all SSH-related tasks
   - Enhanced debugging output with verified vs original path comparison
 
-### Technical Details 🔍
+### Technical Details 
 - **Error Resolution**: Fixed "The directory /home/github-runner/.ssh does not exist" by ensuring proper task execution order
 - **Permission Fix**: Resolved SSH public key read permissions by adding privilege escalation to file reading tasks
 - **Syntax Improvement**: Converted multi-line `when` conditions from list format to folded scalar format for better reliability
 
 ## [1.0.0] - 2025-06-25
 
-### Added ✅
+### Added 
 - **GitHub Runner Installation** - Automatic download and installation of latest GitHub Actions Runner
 - **Dual Mode Support** - Complete support for both repository-level and organization-level runners
 - **User Management System** - Dedicated system user creation with configurable sudo privileges
@@ -365,7 +388,7 @@ github_runner_logrotate_options:
 - **Environment Customization** - Custom environment variables and hook scripts support
 - **Health Verification** - Built-in verification and connectivity testing suite
 
-### Features 🚀
+### Features 
 - **Automatic Latest Version Detection** - Fetches and installs the latest GitHub Runner release automatically
 - **Architecture Support** - Full support for x64 and arm64 architectures with auto-detection
 - **Flexible Authentication** - Support for both Personal Access Tokens and direct registration tokens
@@ -377,7 +400,7 @@ github_runner_logrotate_options:
 - **Cleanup Automation** - Automatic cleanup of temporary files and installation artifacts
 - **Configuration Validation** - Extensive variable validation and system compatibility checks
 
-### Security Enhancements 🛡️
+### Security Enhancements 
 - **Systemd Security** - Implementation of comprehensive systemd security features:
   - NoNewPrivileges, PrivateTmp, ProtectSystem, ProtectHome
   - Device access control and capability restrictions
@@ -389,7 +412,7 @@ github_runner_logrotate_options:
 - **SSL Verification** - Configurable SSL certificate validation for secure communications
 - **Telemetry Controls** - Options to disable telemetry and analytics collection
 
-### Installation and Configuration 📦
+### Installation and Configuration 
 - **Prerequisites Management** - Automatic system requirements validation and dependency installation
 - **Network Connectivity** - GitHub API and releases connectivity verification
 - **Disk Space Validation** - Minimum disk space and memory requirements checking
@@ -404,7 +427,7 @@ github_runner_logrotate_options:
 - **Package Management** - Automatic package manager detection and usage (apt, yum, dnf)
 - **Distribution Variables** - OS-specific variable loading and configuration
 
-### Task Organization and Flow 🔄
+### Task Organization and Flow 
 - **Modular Task Structure** - Organized task files for each major component:
   - `main.yml` - Main orchestration and flow control
   - `assert.yml` - Comprehensive variable validation (50+ validation checks)
@@ -421,20 +444,20 @@ github_runner_logrotate_options:
 - **Environment Template** - Runner environment variables and configuration
 - **Sudoers Template** - Secure sudo configuration with logging and environment preservation
 
-### Variable System and Customization ⚙️
+### Variable System and Customization 
 - **Comprehensive Defaults** - Production-ready default configuration values
 - **Flexible Customization** - 50+ configurable variables for complete customization
 - **Validation Framework** - Extensive variable validation with clear error messages
 - **Documentation** - Comprehensive variable documentation with examples and use cases
 
-### Debugging and Troubleshooting 🔍
+### Debugging and Troubleshooting 
 - **Debug Mode** - Optional debug mode with detailed output and verification
 - **Status Reporting** - Comprehensive status summaries throughout execution
 - **Error Handling** - Clear error messages with suggested resolutions
 - **Log Integration** - Service log monitoring and display capabilities
 - **Health Checks** - Multi-level health verification and reporting
 
-### Handler System 🔄
+### Handler System 
 - **Service Management** - Handlers for systemd daemon reload and service restart
 - **State Management** - Proper service state management with start/stop/restart capabilities
 - **Dependency Handling** - Proper handler dependency and execution order
@@ -447,13 +470,12 @@ github_runner_logrotate_options:
 - **API Documentation** - Complete variable documentation with types and defaults
 
 ### Code Quality and Standards 🏆
-- **Emoji Integration** - Consistent emoji usage following repository standards (🧪 🔍 ✅ ❌ 📊 🚀 etc.)
 - **English-Only Content** - All content in English following repository policies
 - **Professional Naming** - Consistent and professional task naming conventions
 - **Error Handling** - Comprehensive error handling with meaningful messages
 - **Performance Optimization** - Efficient task execution with proper conditionals and checks
 
-### Testing and Validation Framework 🧪
+### Testing and Validation Framework 
 - **System Validation** - Operating system and architecture compatibility checks
 - **Network Testing** - GitHub API and connectivity validation
 - **Installation Verification** - Complete installation file and permission verification
@@ -461,7 +483,7 @@ github_runner_logrotate_options:
 - **Configuration Validation** - Runner configuration and registration verification
 - **Resource Monitoring** - System resource usage and availability checks
 
-### Ansible Integration 🔧
+### Ansible Integration 
 - **Role Metadata** - Complete Galaxy metadata with platform and tag information
 - **Variable Loading** - OS-specific variable loading with fallback mechanisms
 - **Fact Gathering** - Proper Ansible fact usage and validation
