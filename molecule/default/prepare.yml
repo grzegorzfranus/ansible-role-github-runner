@@ -8,24 +8,24 @@
   gather_facts: true
 
   tasks:
-    - name: 🛠️ Prepare | Fix /etc/shadow permissions
+    - name: Prepare | Fix /etc/shadow permissions
       become: true
       register: etc_shadow
       ansible.builtin.shell:
         cmd: |
-          echo "🔍 Checking /etc/shadow permissions..."
+          echo "Checking /etc/shadow permissions..."
           ls -l /etc/shadow
           chmod 0400 /etc/shadow
-          echo "✅ Fixed /etc/shadow permissions:"
+          echo "Fixed /etc/shadow permissions:"
           ls -l /etc/shadow
         executable: /bin/bash
       changed_when: true
 
-    - name: 📊 Prepare | Verify shadow file permissions
+    - name: Prepare | Verify shadow file permissions
       ansible.builtin.debug:
         var: etc_shadow.stdout
 
-    - name: 🔧 Prepare | Ensure required directories exist
+    - name: Prepare | Ensure required directories exist
       become: true
       ansible.builtin.file:
         path: "{{ item }}"
@@ -40,18 +40,18 @@
         - /var/log
         - /opt
       when: >
-        ansible_os_family == "Debian"
+        ansible_facts['os_family'] == "Debian"
 
-    - name: 🔄 Prepare | Update apt cache
+    - name: Prepare | Update apt cache
       become: true
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 600
       changed_when: false
       when: >
-        ansible_os_family == "Debian"
+        ansible_facts['os_family'] == "Debian"
 
-    - name: 📦 Prepare | Install basic testing dependencies
+    - name: Prepare | Install basic testing dependencies
       become: true
       ansible.builtin.package:
         name:
@@ -65,16 +65,16 @@
           - logrotate
         state: present
 
-    - name: 🔄 Prepare | Start rsyslog service
+    - name: Prepare | Start rsyslog service
       become: true
       ansible.builtin.service:
         name: rsyslog
         state: started
         enabled: true
       when: >
-        ansible_service_mgr == 'systemd'
+        ansible_facts['service_mgr'] == 'systemd'
 
-    - name: ⏳ Prepare | Wait for systemd to complete initialization
+    - name: Prepare | Wait for systemd to complete initialization
       become: true
       ansible.builtin.systemd:
         name: multi-user.target
@@ -84,11 +84,11 @@
       retries: 30
       delay: 5
       when: >
-        ansible_service_mgr == 'systemd'
+        ansible_facts['service_mgr'] == 'systemd'
       changed_when: false
       failed_when: false
 
-    - name: 🛠️ Prepare | Create test directories for GitHub Runner
+    - name: Prepare | Create test directories for GitHub Runner
       become: true
       ansible.builtin.file:
         path: "{{ item }}"
@@ -101,7 +101,7 @@
         - /opt/actions-runner-test
         - /home/test-runner
 
-    - name: 🔧 Prepare | Mock GitHub API responses (create fake endpoints)
+    - name: Prepare | Mock GitHub API responses (create fake endpoints)
       become: true
       ansible.builtin.copy:
         content: |
@@ -115,10 +115,10 @@
         dest: /tmp/mock-github-api-response.json
         mode: '0644'
 
-    - name: 📊 Prepare | Display preparation summary
+    - name: Prepare | Display preparation summary
       ansible.builtin.debug:
         msg:
-          - "✅ Molecule preparation completed"
-          - "🔧 Basic dependencies: Installed"
-          - "🗂️ Test directories: Created"
-          - "🔄 RSyslog service: Started"
+          - "Molecule preparation completed"
+          - "Basic dependencies: Installed"
+          - "Test directories: Created"
+          - "RSyslog service: Started"

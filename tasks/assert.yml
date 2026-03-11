@@ -19,139 +19,139 @@
 # -----------------------------------------------------------------------------
 # 1. General Settings Assertions
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | assert | Validate role action parameter
+- name: GitHub Runner | assert | Validate role action parameter
   ansible.builtin.assert:
     that:
       - github_runner_role_action is defined
       - github_runner_role_action is string
       - github_runner_role_action in ["all", "prerequisites", "user", "install", "configure", "service", "logging"]
-    fail_msg: "❌ Invalid role action '{{ github_runner_role_action | default('undefined') }}'. Must be one of: all, prerequisites, user, install, configure, service, logging"
-    success_msg: "✅ Role action parameter is valid: {{ github_runner_role_action }}"
+    fail_msg: "Invalid role action '{{ github_runner_role_action | default('undefined') }}'. Must be one of: all, prerequisites, user, install, configure, service, logging"
+    success_msg: "Role action parameter is valid: {{ github_runner_role_action }}"
 
-- name: 🧪 GitHub Runner | assert | Validate enabled flag
+- name: GitHub Runner | assert | Validate enabled flag
   ansible.builtin.assert:
     that:
       - github_runner_enabled is defined
       - github_runner_enabled is boolean
-    fail_msg: "❌ Invalid enabled setting '{{ github_runner_enabled | default('undefined') }}'. Must be boolean (true/false)"
-    success_msg: "✅ GitHub Runner enabled flag is valid: {{ github_runner_enabled }}"
+    fail_msg: "Invalid enabled setting '{{ github_runner_enabled | default('undefined') }}'. Must be boolean (true/false)"
+    success_msg: "GitHub Runner enabled flag is valid: {{ github_runner_enabled }}"
 
-- name: 🧪 GitHub Runner | assert | Validate debug flag
+- name: GitHub Runner | assert | Validate debug flag
   ansible.builtin.assert:
     that:
       - github_runner_debug is defined
       - github_runner_debug is boolean
-    fail_msg: "❌ Invalid debug setting '{{ github_runner_debug | default('undefined') }}'. Must be boolean (true/false)"
-    success_msg: "✅ Debug flag is valid: {{ github_runner_debug }}"
+    fail_msg: "Invalid debug setting '{{ github_runner_debug | default('undefined') }}'. Must be boolean (true/false)"
+    success_msg: "Debug flag is valid: {{ github_runner_debug }}"
 
 # -----------------------------------------------------------------------------
 # 2. Installation Settings Assertions
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | assert | Validate runner version
+- name: GitHub Runner | assert | Validate runner version
   ansible.builtin.assert:
     that:
       - github_runner_version is defined
       - github_runner_version is string
       - github_runner_version | length > 0
       - github_runner_version == "latest" or github_runner_version is match(github_runner_valid_version_pattern)
-    fail_msg: "❌ Invalid runner version '{{ github_runner_version | default('undefined') }}'. Must be 'latest' or semantic version (e.g., 'v2.311.0')"
-    success_msg: "✅ Runner version is valid: {{ github_runner_version }}"
+    fail_msg: "Invalid runner version '{{ github_runner_version | default('undefined') }}'. Must be 'latest' or semantic version (e.g., 'v2.311.0')"
+    success_msg: "Runner version is valid: {{ github_runner_version }}"
 
-- name: 🧪 GitHub Runner | assert | Validate runner architecture
+- name: GitHub Runner | assert | Validate runner architecture
   ansible.builtin.assert:
     that:
       - github_runner_architecture is defined
       - github_runner_architecture is string
       - github_runner_architecture in ["x64", "arm64"]
-    fail_msg: "❌ Invalid architecture '{{ github_runner_architecture | default('undefined') }}'. Must be 'x64' or 'arm64'"
-    success_msg: "✅ Runner architecture is valid: {{ github_runner_architecture }}"
+    fail_msg: "Invalid architecture '{{ github_runner_architecture | default('undefined') }}'. Must be 'x64' or 'arm64'"
+    success_msg: "Runner architecture is valid: {{ github_runner_architecture }}"
 
-- name: 🧪 GitHub Runner | assert | Validate runner OS
+- name: GitHub Runner | assert | Validate runner OS
   ansible.builtin.assert:
     that:
       - github_runner_os is defined
       - github_runner_os is string
       - github_runner_os == "linux"
-    fail_msg: "❌ Invalid OS '{{ github_runner_os | default('undefined') }}'. Must be 'linux'"
-    success_msg: "✅ Runner OS is valid: {{ github_runner_os }}"
+    fail_msg: "Invalid OS '{{ github_runner_os | default('undefined') }}'. Must be 'linux'"
+    success_msg: "Runner OS is valid: {{ github_runner_os }}"
 
-- name: 🧪 GitHub Runner | assert | Validate installation directory
+- name: GitHub Runner | assert | Validate installation directory
   ansible.builtin.assert:
     that:
       - github_runner_install_dir is defined
       - github_runner_install_dir is string
       - github_runner_install_dir | length > 0
       - github_runner_install_dir is search('^/')
-    fail_msg: "❌ Invalid installation directory '{{ github_runner_install_dir | default('undefined') }}'. Must be a non-empty absolute path"
-    success_msg: "✅ Installation directory is valid: {{ github_runner_install_dir }}"
+    fail_msg: "Invalid installation directory '{{ github_runner_install_dir | default('undefined') }}'. Must be a non-empty absolute path"
+    success_msg: "Installation directory is valid: {{ github_runner_install_dir }}"
 
-- name: 🧪 GitHub Runner | assert | Validate cleanup flag
+- name: GitHub Runner | assert | Validate cleanup flag
   ansible.builtin.assert:
     that:
       - github_runner_cleanup is defined
       - github_runner_cleanup is boolean
-    fail_msg: "❌ Invalid cleanup setting '{{ github_runner_cleanup | default('undefined') }}'. Must be boolean (true/false)"
-    success_msg: "✅ Cleanup flag is valid: {{ github_runner_cleanup }}"
+    fail_msg: "Invalid cleanup setting '{{ github_runner_cleanup | default('undefined') }}'. Must be boolean (true/false)"
+    success_msg: "Cleanup flag is valid: {{ github_runner_cleanup }}"
 
 # -----------------------------------------------------------------------------
 # 3. GitHub Configuration Assertions
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | assert | Validate GitHub server URL
+- name: GitHub Runner | assert | Validate GitHub server URL
   ansible.builtin.assert:
     that:
       - github_runner_server_url is defined
       - github_runner_server_url is string
       - github_runner_server_url | length > 0
       - github_runner_server_url is match(github_runner_valid_url_pattern)
-    fail_msg: "❌ Invalid server URL '{{ github_runner_server_url | default('undefined') }}'. Must be a valid HTTPS URL"
-    success_msg: "✅ GitHub server URL is valid: {{ github_runner_server_url }}"
+    fail_msg: "Invalid server URL '{{ github_runner_server_url | default('undefined') }}'. Must be a valid HTTPS URL"
+    success_msg: "GitHub server URL is valid: {{ github_runner_server_url }}"
 
-- name: 🧪 GitHub Runner | assert | Validate runner scope configuration
+- name: GitHub Runner | assert | Validate runner scope configuration
   ansible.builtin.assert:
     that:
       - (github_runner_repository_url | length > 0 and github_runner_organization | length == 0) or
         (github_runner_repository_url | length == 0 and github_runner_organization | length > 0) or
         (github_runner_repo_url_direct | length > 0)
-    fail_msg: "❌ Invalid runner scope. Must specify either repository_url OR organization OR repo_url_direct, but not both"
-    success_msg: "✅ Runner scope configuration is valid"
+    fail_msg: "Invalid runner scope. Must specify either repository_url OR organization OR repo_url_direct, but not both"
+    success_msg: "Runner scope configuration is valid"
 
-- name: 🧪 GitHub Runner | assert | Validate repository URL format
+- name: GitHub Runner | assert | Validate repository URL format
   ansible.builtin.assert:
     that:
       - github_runner_repository_url is match('^https://github.com/[^/]+/[^/]+$') or
         github_runner_repository_url is match('^[^/]+/[^/]+$') or
         github_runner_repository_url | length == 0
-    fail_msg: "❌ Invalid repository URL format '{{ github_runner_repository_url | default('undefined') }}'. Must be 'owner/repo' or 'https://github.com/owner/repo'"
-    success_msg: "✅ Repository URL format is valid: {{ github_runner_repository_url | default('(organization mode)') }}"
+    fail_msg: "Invalid repository URL format '{{ github_runner_repository_url | default('undefined') }}'. Must be 'owner/repo' or 'https://github.com/owner/repo'"
+    success_msg: "Repository URL format is valid: {{ github_runner_repository_url | default('(organization mode)') }}"
   when: >
     github_runner_repository_url | length > 0
 
-- name: 🧪 GitHub Runner | assert | Validate organization name
+- name: GitHub Runner | assert | Validate organization name
   ansible.builtin.assert:
     that:
       - github_runner_organization is string
       - github_runner_organization | length == 0 or github_runner_organization is match('^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$')
-    fail_msg: "❌ Invalid organization name '{{ github_runner_organization | default('undefined') }}'. Must contain only alphanumeric characters, hyphens, and underscores"
-    success_msg: "✅ Organization name is valid: {{ github_runner_organization | default('(repository mode)') }}"
+    fail_msg: "Invalid organization name '{{ github_runner_organization | default('undefined') }}'. Must contain only alphanumeric characters, hyphens, and underscores"
+    success_msg: "Organization name is valid: {{ github_runner_organization | default('(repository mode)') }}"
 
-- name: 🧪 GitHub Runner | assert | Validate access token or registration token
+- name: GitHub Runner | assert | Validate access token or registration token
   ansible.builtin.assert:
     that:
       - (github_runner_access_token | length > 0) or (github_runner_token_direct | length > 0)
-    fail_msg: "❌ Either access_token or token_direct must be provided for runner registration"
-    success_msg: "✅ Authentication token configuration is valid"
+    fail_msg: "Either access_token or token_direct must be provided for runner registration"
+    success_msg: "Authentication token configuration is valid"
 
-- name: 🧪 GitHub Runner | assert | Validate access token format when provided
+- name: GitHub Runner | assert | Validate access token format when provided
   ansible.builtin.assert:
     that:
       - github_runner_access_token | length == 0 or github_runner_access_token is match(github_runner_valid_token_pattern)
-    fail_msg: "❌ Invalid GitHub personal access token format. Expected to start with gh[pous]_ and contain 36-255 alphanumerics"
-    success_msg: "✅ Access token format looks valid"
+    fail_msg: "Invalid GitHub personal access token format. Expected to start with gh[pous]_ and contain 36-255 alphanumerics"
+    success_msg: "Access token format looks valid"
   when: >
     github_runner_access_token | length > 0 and
     not (github_runner_test_mode | default(false))
 
-- name: 🧪 GitHub Runner | assert | Validate runner name
+- name: GitHub Runner | assert | Validate runner name
   ansible.builtin.assert:
     that:
       - github_runner_name is defined
@@ -159,30 +159,30 @@
       - github_runner_name | length > 0
       - github_runner_name | length <= 64
       - github_runner_name is match('^[a-zA-Z0-9][a-zA-Z0-9_.-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$')
-    fail_msg: "❌ Invalid runner name '{{ github_runner_name | default('undefined') }}'. Must be 1-64 characters, alphanumeric with hyphens, underscores, and dots"
-    success_msg: "✅ Runner name is valid: {{ github_runner_name }}"
+    fail_msg: "Invalid runner name '{{ github_runner_name | default('undefined') }}'. Must be 1-64 characters, alphanumeric with hyphens, underscores, and dots"
+    success_msg: "Runner name is valid: {{ github_runner_name }}"
 
-- name: 🧪 GitHub Runner | assert | Validate runner labels
+- name: GitHub Runner | assert | Validate runner labels
   ansible.builtin.assert:
     that:
       - github_runner_labels is defined
       - github_runner_labels is string
       - github_runner_labels | length > 0
-    fail_msg: "❌ Invalid runner labels '{{ github_runner_labels | default('undefined') }}'. Must be a non-empty comma-separated string"
-    success_msg: "✅ Runner labels are valid: {{ github_runner_labels }}"
+    fail_msg: "Invalid runner labels '{{ github_runner_labels | default('undefined') }}'. Must be a non-empty comma-separated string"
+    success_msg: "Runner labels are valid: {{ github_runner_labels }}"
 
 # -----------------------------------------------------------------------------
 # 4. User Management Assertions
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | assert | Validate create user flag
+- name: GitHub Runner | assert | Validate create user flag
   ansible.builtin.assert:
     that:
       - github_runner_create_user is defined
       - github_runner_create_user is boolean
-    fail_msg: "❌ Invalid create user setting '{{ github_runner_create_user | default('undefined') }}'. Must be boolean (true/false)"
-    success_msg: "✅ Create user flag is valid: {{ github_runner_create_user }}"
+    fail_msg: "Invalid create user setting '{{ github_runner_create_user | default('undefined') }}'. Must be boolean (true/false)"
+    success_msg: "Create user flag is valid: {{ github_runner_create_user }}"
 
-- name: 🧪 GitHub Runner | assert | Validate user name
+- name: GitHub Runner | assert | Validate user name
   ansible.builtin.assert:
     that:
       - github_runner_user is defined
@@ -190,10 +190,10 @@
       - github_runner_user | length > 0
       - github_runner_user | length <= 32
       - github_runner_user is match('^[a-z_][a-z0-9_-]*$')
-    fail_msg: "❌ Invalid user name '{{ github_runner_user | default('undefined') }}'. Must be 1-32 lowercase characters, starting with letter or underscore"
-    success_msg: "✅ User name is valid: {{ github_runner_user }}"
+    fail_msg: "Invalid user name '{{ github_runner_user | default('undefined') }}'. Must be 1-32 lowercase characters, starting with letter or underscore"
+    success_msg: "User name is valid: {{ github_runner_user }}"
 
-- name: 🧪 GitHub Runner | assert | Validate user group
+- name: GitHub Runner | assert | Validate user group
   ansible.builtin.assert:
     that:
       - github_runner_user_group is defined
@@ -201,30 +201,30 @@
       - github_runner_user_group | length > 0
       - github_runner_user_group | length <= 32
       - github_runner_user_group is match('^[a-z_][a-z0-9_-]*$')
-    fail_msg: "❌ Invalid group name '{{ github_runner_user_group | default('undefined') }}'. Must be 1-32 lowercase characters, starting with letter or underscore"
-    success_msg: "✅ User group is valid: {{ github_runner_user_group }}"
+    fail_msg: "Invalid group name '{{ github_runner_user_group | default('undefined') }}'. Must be 1-32 lowercase characters, starting with letter or underscore"
+    success_msg: "User group is valid: {{ github_runner_user_group }}"
 
-- name: 🧪 GitHub Runner | assert | Validate user UID
+- name: GitHub Runner | assert | Validate user UID
   ansible.builtin.assert:
     that:
       - github_runner_user_uid is number
       - github_runner_user_uid >= 1000
       - github_runner_user_uid <= 65533
-    fail_msg: "❌ Invalid user UID '{{ github_runner_user_uid | default('undefined') }}'. Must be between 1000 and 65533"
-    success_msg: "✅ User UID is valid: {{ github_runner_user_uid }}"
+    fail_msg: "Invalid user UID '{{ github_runner_user_uid | default('undefined') }}'. Must be between 1000 and 65533"
+    success_msg: "User UID is valid: {{ github_runner_user_uid }}"
   when: github_runner_user_uid is not none
 
-- name: 🧪 GitHub Runner | assert | Validate group GID
+- name: GitHub Runner | assert | Validate group GID
   ansible.builtin.assert:
     that:
       - github_runner_group_gid is number
       - github_runner_group_gid >= 1000
       - github_runner_group_gid <= 65533
-    fail_msg: "❌ Invalid group GID '{{ github_runner_group_gid | default('undefined') }}'. Must be between 1000 and 65533"
-    success_msg: "✅ Group GID is valid: {{ github_runner_group_gid }}"
+    fail_msg: "Invalid group GID '{{ github_runner_group_gid | default('undefined') }}'. Must be between 1000 and 65533"
+    success_msg: "Group GID is valid: {{ github_runner_group_gid }}"
   when: github_runner_group_gid is not none
 
-- name: 🧪 GitHub Runner | assert | Validate sudo configuration
+- name: GitHub Runner | assert | Validate sudo configuration
   ansible.builtin.assert:
     that:
       - github_runner_user_sudo_enabled is defined
@@ -233,10 +233,10 @@
       - github_runner_user_sudo_nopasswd is boolean
       - github_runner_user_sudo_commands is defined
       - github_runner_user_sudo_commands is string
-    fail_msg: "❌ Invalid sudo configuration. All sudo settings must be properly defined"
-    success_msg: "✅ Sudo configuration is valid: enabled={{ github_runner_user_sudo_enabled }}, nopasswd={{ github_runner_user_sudo_nopasswd }}"
+    fail_msg: "Invalid sudo configuration. All sudo settings must be properly defined"
+    success_msg: "Sudo configuration is valid: enabled={{ github_runner_user_sudo_enabled }}, nopasswd={{ github_runner_user_sudo_nopasswd }}"
 
-- name: 🧪 GitHub Runner | assert | Validate SSH key generation configuration
+- name: GitHub Runner | assert | Validate SSH key generation configuration
   ansible.builtin.assert:
     that:
       - github_runner_user_generate_ssh_key is defined
@@ -249,100 +249,100 @@
       - github_runner_user_ssh_key_bits >= 2048
       - github_runner_user_ssh_key_comment is defined
       - github_runner_user_ssh_key_comment is string
-    fail_msg: "❌ Invalid SSH key generation configuration. Check key type (rsa/ed25519/ecdsa) and key bits (>=2048)"
-    success_msg: "✅ SSH key generation configuration is valid: {{ github_runner_user_ssh_key_type }}, {{ github_runner_user_ssh_key_bits }} bits"
+    fail_msg: "Invalid SSH key generation configuration. Check key type (rsa/ed25519/ecdsa) and key bits (>=2048)"
+    success_msg: "SSH key generation configuration is valid: {{ github_runner_user_ssh_key_type }}, {{ github_runner_user_ssh_key_bits }} bits"
 
 # -----------------------------------------------------------------------------
 # 5. Service Configuration Assertions
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | assert | Validate service enabled flag
+- name: GitHub Runner | assert | Validate service enabled flag
   ansible.builtin.assert:
     that:
       - github_runner_service_enabled is defined
       - github_runner_service_enabled is boolean
-    fail_msg: "❌ Invalid service enabled setting '{{ github_runner_service_enabled | default('undefined') }}'. Must be boolean (true/false)"
-    success_msg: "✅ Service enabled flag is valid: {{ github_runner_service_enabled }}"
+    fail_msg: "Invalid service enabled setting '{{ github_runner_service_enabled | default('undefined') }}'. Must be boolean (true/false)"
+    success_msg: "Service enabled flag is valid: {{ github_runner_service_enabled }}"
 
-- name: 🧪 GitHub Runner | assert | Validate service state
+- name: GitHub Runner | assert | Validate service state
   ansible.builtin.assert:
     that:
       - github_runner_service_state is defined
       - github_runner_service_state is string
       - github_runner_service_state in ["started", "stopped", "restarted"]
-    fail_msg: "❌ Invalid service state '{{ github_runner_service_state | default('undefined') }}'. Must be 'started', 'stopped', or 'restarted'"
-    success_msg: "✅ Service state is valid: {{ github_runner_service_state }}"
+    fail_msg: "Invalid service state '{{ github_runner_service_state | default('undefined') }}'. Must be 'started', 'stopped', or 'restarted'"
+    success_msg: "Service state is valid: {{ github_runner_service_state }}"
 
-- name: 🧪 GitHub Runner | assert | Validate restart policy
+- name: GitHub Runner | assert | Validate restart policy
   ansible.builtin.assert:
     that:
       - github_runner_service_restart_policy is defined
       - github_runner_service_restart_policy is string
       - github_runner_service_restart_policy in ["always", "on-failure", "no"]
-    fail_msg: "❌ Invalid restart policy '{{ github_runner_service_restart_policy | default('undefined') }}'. Must be 'always', 'on-failure', or 'no'"
-    success_msg: "✅ Service restart policy is valid: {{ github_runner_service_restart_policy }}"
+    fail_msg: "Invalid restart policy '{{ github_runner_service_restart_policy | default('undefined') }}'. Must be 'always', 'on-failure', or 'no'"
+    success_msg: "Service restart policy is valid: {{ github_runner_service_restart_policy }}"
 
-- name: 🧪 GitHub Runner | assert | Validate max jobs setting
+- name: GitHub Runner | assert | Validate max jobs setting
   ansible.builtin.assert:
     that:
       - github_runner_max_jobs is defined
       - github_runner_max_jobs is number
       - github_runner_max_jobs >= 1
       - github_runner_max_jobs <= 10
-    fail_msg: "❌ Invalid max jobs setting '{{ github_runner_max_jobs | default('undefined') }}'. Must be between 1 and 10"
-    success_msg: "✅ Max jobs setting is valid: {{ github_runner_max_jobs }}"
+    fail_msg: "Invalid max jobs setting '{{ github_runner_max_jobs | default('undefined') }}'. Must be between 1 and 10"
+    success_msg: "Max jobs setting is valid: {{ github_runner_max_jobs }}"
 
 # -----------------------------------------------------------------------------
 # 6. Security Settings Assertions
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | assert | Validate file permissions
+- name: GitHub Runner | assert | Validate file permissions
   ansible.builtin.assert:
     that:
       - github_runner_install_dir_mode is defined
       - github_runner_install_dir_mode is string
       - github_runner_install_dir_mode is match('^0[0-7]{3}$')
-    fail_msg: "❌ Invalid file permissions. Must be in octal format (e.g., '0755')"
-    success_msg: "✅ File permissions are valid: install={{ github_runner_install_dir_mode }}"
+    fail_msg: "Invalid file permissions. Must be in octal format (e.g., '0755')"
+    success_msg: "File permissions are valid: install={{ github_runner_install_dir_mode }}"
 
-- name: 🧪 GitHub Runner | assert | Validate SSL verification flag
+- name: GitHub Runner | assert | Validate SSL verification flag
   ansible.builtin.assert:
     that:
       - github_runner_verify_ssl is defined
       - github_runner_verify_ssl is boolean
-    fail_msg: "❌ Invalid SSL verification setting '{{ github_runner_verify_ssl | default('undefined') }}'. Must be boolean (true/false)"
-    success_msg: "✅ SSL verification flag is valid: {{ github_runner_verify_ssl }}"
+    fail_msg: "Invalid SSL verification setting '{{ github_runner_verify_ssl | default('undefined') }}'. Must be boolean (true/false)"
+    success_msg: "SSL verification flag is valid: {{ github_runner_verify_ssl }}"
 
 # -----------------------------------------------------------------------------
 # 7. System Requirements Assertions
 # -----------------------------------------------------------------------------
-- name: 🧪 GitHub Runner | assert | Validate operating system support
+- name: GitHub Runner | assert | Validate operating system support
   ansible.builtin.assert:
     that:
       - ansible_facts['os_family'] in github_runner_supported_os_families
       - ansible_facts['distribution'] in github_runner_supported_distributions
-    fail_msg: "❌ Unsupported operating system: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}. Supported: {{ github_runner_supported_distributions | join(', ') }}"
-    success_msg: "✅ Operating system is supported: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+    fail_msg: "Unsupported operating system: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}. Supported: {{ github_runner_supported_distributions | join(', ') }}"
+    success_msg: "Operating system is supported: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
 
-- name: 🧪 GitHub Runner | assert | Validate system architecture
+- name: GitHub Runner | assert | Validate system architecture
   ansible.builtin.assert:
     that:
       - ansible_facts['architecture'] in ['x86_64', 'aarch64']
-    fail_msg: "❌ Unsupported architecture: {{ ansible_facts['architecture'] }}. Supported: x86_64, aarch64"
-    success_msg: "✅ System architecture is supported: {{ ansible_facts['architecture'] }}"
+    fail_msg: "Unsupported architecture: {{ ansible_facts['architecture'] }}. Supported: x86_64, aarch64"
+    success_msg: "System architecture is supported: {{ ansible_facts['architecture'] }}"
 
-- name: 🧪 GitHub Runner | assert | Validate minimum disk space
+- name: GitHub Runner | assert | Validate minimum disk space
   ansible.builtin.assert:
     that:
       - github_runner_min_disk_space_gb is defined
       - github_runner_min_disk_space_gb is number
       - github_runner_min_disk_space_gb > 0
-    fail_msg: "❌ Invalid minimum disk space setting '{{ github_runner_min_disk_space_gb | default('undefined') }}'. Must be a positive number"
-    success_msg: "✅ Minimum disk space requirement is valid: {{ github_runner_min_disk_space_gb }}GB"
+    fail_msg: "Invalid minimum disk space setting '{{ github_runner_min_disk_space_gb | default('undefined') }}'. Must be a positive number"
+    success_msg: "Minimum disk space requirement is valid: {{ github_runner_min_disk_space_gb }}GB"
 
-- name: 🧪 GitHub Runner | assert | Validate minimum memory
+- name: GitHub Runner | assert | Validate minimum memory
   ansible.builtin.assert:
     that:
       - github_runner_min_memory_mb is defined
       - github_runner_min_memory_mb is number
       - github_runner_min_memory_mb > 0
-    fail_msg: "❌ Invalid minimum memory setting '{{ github_runner_min_memory_mb | default('undefined') }}'. Must be a positive number"
-    success_msg: "✅ Minimum memory requirement is valid: {{ github_runner_min_memory_mb }}MB"
+    fail_msg: "Invalid minimum memory setting '{{ github_runner_min_memory_mb | default('undefined') }}'. Must be a positive number"
+    success_msg: "Minimum memory requirement is valid: {{ github_runner_min_memory_mb }}MB"

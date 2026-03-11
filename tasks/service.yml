@@ -18,7 +18,7 @@
 # -----------------------------------------------------------------------------
 # 1. Service File Creation
 # -----------------------------------------------------------------------------
-- name: 📝 GitHub Runner | service | Create systemd service file
+- name: GitHub Runner | service | Create systemd service file
   become: true
   ansible.builtin.template:
     src: "github-runner.service.j2"
@@ -35,7 +35,7 @@
     - service
     - systemd
 
-- name: 📁 GitHub Runner | service | Create systemd override directory
+- name: GitHub Runner | service | Create systemd override directory
   become: true
   ansible.builtin.file:
     path: "{{ github_runner_systemd_override_dir }}"
@@ -50,7 +50,7 @@
 # -----------------------------------------------------------------------------
 # 2. Service Limits and Environment Configuration
 # -----------------------------------------------------------------------------
-- name: 🔧 GitHub Runner | service | Create service override file for resource limits
+- name: GitHub Runner | service | Create service override file for resource limits
   become: true
   ansible.builtin.template:
     src: "service-override.conf.j2"
@@ -71,7 +71,7 @@
 # -----------------------------------------------------------------------------
 # 3. Service Environment File
 # -----------------------------------------------------------------------------
-- name: 📄 GitHub Runner | service | Create service environment file
+- name: GitHub Runner | service | Create service environment file
   become: true
   ansible.builtin.template:
     src: "runner-environment.j2"
@@ -88,7 +88,7 @@
 # -----------------------------------------------------------------------------
 # 4. Systemd Daemon Management
 # -----------------------------------------------------------------------------
-- name: 🔄 GitHub Runner | service | Set systemd reload flags
+- name: GitHub Runner | service | Set systemd reload flags
   ansible.builtin.set_fact:
     _github_runner_service_file_changed: "{{ _github_runner_service_file_result.changed | default(false) }}"
     _github_runner_override_file_changed: "{{ _github_runner_override_file_result.changed | default(false) }}"
@@ -96,7 +96,7 @@
     - service
     - systemd
 
-- name: 🔄 GitHub Runner | service | Reload systemd daemon if needed
+- name: GitHub Runner | service | Reload systemd daemon if needed
   become: true
   ansible.builtin.systemd:
     daemon_reload: true
@@ -110,7 +110,7 @@
 # -----------------------------------------------------------------------------
 # 5. Service State Management
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | service | Check current service status
+- name: GitHub Runner | service | Check current service status
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
   register: _github_runner_current_service_status
@@ -121,7 +121,7 @@
     - service
     - check
 
-- name: 🧪 GitHub Runner | service | Mock service status for test mode
+- name: GitHub Runner | service | Mock service status for test mode
   ansible.builtin.set_fact:
     _github_runner_current_service_status:
       status:
@@ -134,7 +134,7 @@
     - service
     - check
 
-- name: 🧪 GitHub Runner | service | Set expected service states
+- name: GitHub Runner | service | Set expected service states
   ansible.builtin.set_fact:
     _expected_active_state: "{{ 'active' if github_runner_service_state == 'started' else 'inactive' }}"
     _expected_unit_state: "{{ 'enabled' if github_runner_service_enabled else 'disabled' }}"
@@ -142,24 +142,24 @@
     - service
     - check
 
-- name: 🔍 GitHub Runner | service | Debug service status (always show for troubleshooting)
+- name: GitHub Runner | service | Debug service status (always show for troubleshooting)
   ansible.builtin.debug:
     msg:
-      - "🔍 Service Status Debug:"
-      - "   📝 Service Name: {{ github_runner_service_name }}"
-      - "   🎯 Target State: {{ github_runner_service_state }}"
-      - "   🚀 Target Enabled: {{ github_runner_service_enabled }}"
-      - "   📊 Expected Active State: {{ _expected_active_state }}"
-      - "   🔧 Expected Unit State: {{ _expected_unit_state }}"
-      - "   📈 Current Active State: {{ _github_runner_current_service_status.status.ActiveState | default('unknown') }}"
-      - "   ⚙️ Current Unit State: {{ _github_runner_current_service_status.status.UnitFileState | default('unknown') }}"
-      - "   📉 Current Sub State: {{ _github_runner_current_service_status.status.SubState | default('unknown') }}"
-      - "   ❓ Status Defined: {{ _github_runner_current_service_status.status is defined }}"
+      - "Service Status Debug:"
+      - "Service Name: {{ github_runner_service_name }}"
+      - "Target State: {{ github_runner_service_state }}"
+      - "Target Enabled: {{ github_runner_service_enabled }}"
+      - "Expected Active State: {{ _expected_active_state }}"
+      - "Expected Unit State: {{ _expected_unit_state }}"
+      - "Current Active State: {{ _github_runner_current_service_status.status.ActiveState | default('unknown') }}"
+      - "Current Unit State: {{ _github_runner_current_service_status.status.UnitFileState | default('unknown') }}"
+      - "Current Sub State: {{ _github_runner_current_service_status.status.SubState | default('unknown') }}"
+      - "Status Defined: {{ _github_runner_current_service_status.status is defined }}"
   tags:
     - service
     - check
 
-- name: 🧪 GitHub Runner | service | Determine if service management needed
+- name: GitHub Runner | service | Determine if service management needed
   ansible.builtin.set_fact:
     _service_needs_management: >-
       {{
@@ -178,24 +178,24 @@
     - service
     - check
 
-- name: 📊 GitHub Runner | service | Display service management decision (always show for troubleshooting)
+- name: GitHub Runner | service | Display service management decision (always show for troubleshooting)
   ansible.builtin.debug:
     msg:
-      - "🎯 Service Management Decision:"
-      - "   🔧 Service management needed: {{ _service_needs_management }}"
-      - "   🧪 Test Mode: {{ github_runner_test_mode | default(false) }}"
-      - "   📝 Evaluation logic:"
-      - "     - Test mode: {{ github_runner_test_mode | default(false) }}"
-      - "     - Status undefined: {{ not _github_runner_current_service_status.status is defined }}"
-      - "     - Need start: {{ github_runner_service_state == 'started' and _github_runner_current_service_status.status.ActiveState | default('unknown') != 'active' }}"
-      - "     - Need stop: {{ github_runner_service_state == 'stopped' and _github_runner_current_service_status.status.ActiveState | default('unknown') not in ['inactive', 'failed'] }}"
-      - "     - Need enable: {{ github_runner_service_enabled and _github_runner_current_service_status.status.UnitFileState | default('unknown') != 'enabled' }}"
-      - "     - Need disable: {{ not github_runner_service_enabled and _github_runner_current_service_status.status.UnitFileState | default('unknown') != 'disabled' }}"
+      - "Service Management Decision:"
+      - "Service management needed: {{ _service_needs_management }}"
+      - "Test Mode: {{ github_runner_test_mode | default(false) }}"
+      - "Evaluation logic:"
+      - "- Test mode: {{ github_runner_test_mode | default(false) }}"
+      - "- Status undefined: {{ not _github_runner_current_service_status.status is defined }}"
+      - "- Need start: {{ github_runner_service_state == 'started' and _github_runner_current_service_status.status.ActiveState | default('unknown') != 'active' }}"
+      - "- Need stop: {{ github_runner_service_state == 'stopped' and _github_runner_current_service_status.status.ActiveState | default('unknown') not in ['inactive', 'failed'] }}"
+      - "- Need enable: {{ github_runner_service_enabled and _github_runner_current_service_status.status.UnitFileState | default('unknown') != 'enabled' }}"
+      - "- Need disable: {{ not github_runner_service_enabled and _github_runner_current_service_status.status.UnitFileState | default('unknown') != 'disabled' }}"
   tags:
     - service
     - check
 
-- name: 🚀 GitHub Runner | service | Enable and start GitHub Runner service
+- name: GitHub Runner | service | Enable and start GitHub Runner service
   become: true
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
@@ -209,14 +209,14 @@
     - service
     - start
 
-- name: 🧪 GitHub Runner | service | Mock service management for test mode
+- name: GitHub Runner | service | Mock service management for test mode
   ansible.builtin.debug:
     msg:
-      - "🧪 Test Mode: Service management mocked"
-      - "   📝 Service Name: {{ github_runner_service_name }}"
-      - "   🚀 Target Enabled: {{ github_runner_service_enabled }}"
-      - "   🎯 Target State: {{ github_runner_service_state }}"
-      - "   ⚠️ Actual systemd operations skipped in test mode"
+      - "Test Mode: Service management mocked"
+      - "Service Name: {{ github_runner_service_name }}"
+      - "Target Enabled: {{ github_runner_service_enabled }}"
+      - "Target State: {{ github_runner_service_state }}"
+      - "Actual systemd operations skipped in test mode"
   register: _github_runner_service_result
   when: >
     _service_needs_management | bool and
@@ -225,9 +225,9 @@
     - service
     - start
 
-- name: ✅ GitHub Runner | service | Verify service startup
+- name: GitHub Runner | service | Verify service startup
   ansible.builtin.debug:
-    msg: "✅ GitHub Runner service {{ _github_runner_service_result.state | default('unchanged') }}: {{ github_runner_service_name }}"
+    msg: "GitHub Runner service {{ _github_runner_service_result.state | default('unchanged') }}: {{ github_runner_service_name }}"
   when: >
     _github_runner_service_result is defined and
     (_github_runner_service_result is succeeded or _github_runner_service_result is skipped)
@@ -238,7 +238,7 @@
 # -----------------------------------------------------------------------------
 # 6. Service Status Verification
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | service | Check service status
+- name: GitHub Runner | service | Check service status
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
   register: _github_runner_service_status
@@ -248,7 +248,7 @@
     - service
     - status
 
-- name: 🧪 GitHub Runner | service | Mock final service status for test mode
+- name: GitHub Runner | service | Mock final service status for test mode
   ansible.builtin.set_fact:
     _github_runner_service_status:
       status:
@@ -261,7 +261,7 @@
     - service
     - status
 
-- name: 🔍 GitHub Runner | service | Get service logs (last 10 lines)
+- name: GitHub Runner | service | Get service logs (last 10 lines)
   ansible.builtin.shell: |
     journalctl -u "{{ github_runner_service_name }}" -n 10 --no-pager -q
   register: _github_runner_service_logs
@@ -275,7 +275,7 @@
 # -----------------------------------------------------------------------------
 # 7. Service Health Check
 # -----------------------------------------------------------------------------
-- name: ⏳ GitHub Runner | service | Wait for service to stabilize
+- name: GitHub Runner | service | Wait for service to stabilize
   ansible.builtin.wait_for:
     timeout: 30
   delegate_to: localhost
@@ -286,7 +286,7 @@
     - service
     - wait
 
-- name: 🔍 GitHub Runner | service | Check service health after startup
+- name: GitHub Runner | service | Check service health after startup
   ansible.builtin.systemd:
     name: "{{ github_runner_service_name }}"
   register: _github_runner_service_health
@@ -297,7 +297,7 @@
     - service
     - health
 
-- name: 🧪 GitHub Runner | service | Mock service health check for test mode
+- name: GitHub Runner | service | Mock service health check for test mode
   ansible.builtin.set_fact:
     _github_runner_service_health:
       status:
@@ -310,13 +310,13 @@
     - service
     - health
 
-- name: 🧪 GitHub Runner | service | Validate service is running
+- name: GitHub Runner | service | Validate service is running
   ansible.builtin.assert:
     that:
       - _github_runner_service_health.status.ActiveState == "active"
       - _github_runner_service_health.status.SubState == "running"
-    fail_msg: "❌ GitHub Runner service is not running properly. State: {{ _github_runner_service_health.status.ActiveState }}/{{ _github_runner_service_health.status.SubState }}"
-    success_msg: "✅ GitHub Runner service is running and healthy"
+    fail_msg: "GitHub Runner service is not running properly. State: {{ _github_runner_service_health.status.ActiveState }}/{{ _github_runner_service_health.status.SubState }}"
+    success_msg: "GitHub Runner service is running and healthy"
   when: >
     github_runner_service_state == "started" and
     _github_runner_service_health is defined
@@ -327,7 +327,7 @@
 # -----------------------------------------------------------------------------
 # 8. Process Information
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | service | Get runner process information
+- name: GitHub Runner | service | Get runner process information
   ansible.builtin.shell: |
     set -o pipefail
     ps aux | grep -E "(Runner\.(Listener|Worker))" | grep -v grep | head -5
@@ -343,7 +343,7 @@
     - service
     - processes
 
-- name: 📊 GitHub Runner | service | Display process information
+- name: GitHub Runner | service | Display process information
   ansible.builtin.debug:
     msg: "{{ _github_runner_processes.stdout_lines }}"
   when: >
@@ -356,7 +356,7 @@
 # -----------------------------------------------------------------------------
 # 9. Service Configuration Validation
 # -----------------------------------------------------------------------------
-- name: 🔍 GitHub Runner | service | Verify service file exists
+- name: GitHub Runner | service | Verify service file exists
   ansible.builtin.stat:
     path: "{{ github_runner_systemd_service_path }}"
   register: _github_runner_service_file_check
@@ -364,7 +364,7 @@
     - service
     - verify
 
-- name: 🔍 GitHub Runner | service | Verify override configuration exists
+- name: GitHub Runner | service | Verify override configuration exists
   ansible.builtin.stat:
     path: "{{ github_runner_systemd_override_dir }}/override.conf"
   register: _github_runner_override_file_check
@@ -372,13 +372,13 @@
     - service
     - verify
 
-- name: 🧪 GitHub Runner | service | Validate service configuration files
+- name: GitHub Runner | service | Validate service configuration files
   ansible.builtin.assert:
     that:
       - _github_runner_service_file_check.stat.exists
       - _github_runner_override_file_check.stat.exists
-    fail_msg: "❌ Service configuration files are missing"
-    success_msg: "✅ Service configuration files are present"
+    fail_msg: "Service configuration files are missing"
+    success_msg: "Service configuration files are present"
   tags:
     - service
     - verify
@@ -386,20 +386,20 @@
 # -----------------------------------------------------------------------------
 # 10. Service Management Summary
 # -----------------------------------------------------------------------------
-- name: 📊 GitHub Runner | service | Display service summary
+- name: GitHub Runner | service | Display service summary
   ansible.builtin.debug:
     msg:
-      - "🎯 GitHub Runner Service Summary:"
-      - "   📝 Service Name: {{ github_runner_service_name }}"
-      - "   📁 Service File: {{ github_runner_systemd_service_path }}"
-      - "   🔧 Override Dir: {{ github_runner_systemd_override_dir }}"
-      - "   🚀 Enabled: {{ github_runner_service_enabled }}"
-      - "   ⚡ State: {{ _github_runner_service_status.status.ActiveState }}/{{ _github_runner_service_status.status.SubState }}"
-      - "   🔄 Restart Policy: {{ github_runner_service_restart_policy }}"
-      - "   💾 Memory Limit: {{ github_runner_service_limits.memory_max }}"
-      - "   ⚙️ CPU Quota: {{ github_runner_service_limits.cpu_quota }}"
-      - "   👤 Run As User: {{ github_runner_user }}"
-      - "   ✅ Service management completed successfully"
+      - "GitHub Runner Service Summary:"
+      - "Service Name: {{ github_runner_service_name }}"
+      - "Service File: {{ github_runner_systemd_service_path }}"
+      - "Override Dir: {{ github_runner_systemd_override_dir }}"
+      - "Enabled: {{ github_runner_service_enabled }}"
+      - "State: {{ _github_runner_service_status.status.ActiveState }}/{{ _github_runner_service_status.status.SubState }}"
+      - "Restart Policy: {{ github_runner_service_restart_policy }}"
+      - "Memory Limit: {{ github_runner_service_limits.memory_max }}"
+      - "CPU Quota: {{ github_runner_service_limits.cpu_quota }}"
+      - "Run As User: {{ github_runner_user }}"
+      - "Service management completed successfully"
   tags:
     - service
     - summary
@@ -407,10 +407,10 @@
 # -----------------------------------------------------------------------------
 # 11. Service Logs Display
 # -----------------------------------------------------------------------------
-- name: 📋 GitHub Runner | service | Display recent service logs
+- name: GitHub Runner | service | Display recent service logs
   ansible.builtin.debug:
     msg:
-      - "📋 Recent GitHub Runner Service Logs:"
+      - "Recent GitHub Runner Service Logs:"
       - "{{ _github_runner_service_logs.stdout_lines }}"
   when: >
     _github_runner_service_logs.stdout_lines is defined and

@@ -43,8 +43,8 @@ github_runner_version: "latest"
 
 # GitHub Runner architecture (auto-detected based on system)
 github_runner_architecture: >-
-  {{ 'x64' if ansible_architecture == 'x86_64'
-  else 'arm64' if ansible_architecture == 'aarch64'
+  {{ 'x64' if ansible_facts['architecture'] == 'x86_64'
+  else 'arm64' if ansible_facts['architecture'] == 'aarch64'
   else 'x64' }}
 
 # GitHub Runner operating system
@@ -92,10 +92,10 @@ github_runner_repo_url_direct: ""
 github_runner_token_direct: ""
 
 # Runner configuration
-github_runner_name: "{{ ansible_hostname }}"
+github_runner_name: "{{ ansible_facts['hostname'] }}"
 github_runner_group: ""  # Runner group (for organization runners)
 github_runner_labels: >-
-  {{ ansible_distribution | lower }}-{{ ansible_distribution_version }},self-hosted,{{ ansible_architecture }}
+  {{ ansible_facts['distribution'] | lower }}-{{ ansible_facts['distribution_version'] }},self-hosted,{{ ansible_facts['architecture'] }}
 github_runner_work_dir: "{{ github_runner_install_dir }}/_work"
 
 # Runner behavior
@@ -135,7 +135,7 @@ github_runner_user_ssh_key_type: "ed25519"  # SSH key type (rsa, ed25519, ecdsa)
 github_runner_user_ssh_key_bits: 4096       # Key bits (for RSA keys)
 # SSH key comment
 github_runner_user_ssh_key_comment: >-
-  {{ github_runner_user }}@{{ ansible_hostname }}-github-runner
+  {{ github_runner_user }}@{{ ansible_facts['hostname'] }}-github-runner
 
 # -----------------------------------------------------------------------------
 # 5. GitHub Runner Service Management
@@ -215,7 +215,7 @@ github_runner_no_proxy: ""   # Comma-separated list of hosts to bypass proxy
 github_runner_verify_ssl: true
 
 # -----------------------------------------------------------------------------
-# 7a. Download Integrity
+# 7. Download Integrity
 # -----------------------------------------------------------------------------
 # Verify downloaded runner package against release checksums
 github_runner_verify_checksum: false
@@ -223,7 +223,7 @@ github_runner_verify_checksum: false
 github_runner_checksums_file: "sha256sums.txt"
 
 # -----------------------------------------------------------------------------
-# 7. Advanced Options
+# 8. Advanced Options
 # -----------------------------------------------------------------------------
 # Advanced configuration options
 

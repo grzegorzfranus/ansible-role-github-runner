@@ -8,7 +8,7 @@ galaxy_info:
     Supports dedicated system user management, latest version installation, and systemd service configuration.
   license: Apache-2.0
   company: EWARE
-  min_ansible_version: "2.15"
+  min_ansible_version: "2.20"
 
   platforms:
     - name: Debian

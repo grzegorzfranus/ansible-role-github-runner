@@ -7,16 +7,16 @@
   hosts: all
 
   pre_tasks:
-    - name: 🔄 Converge | Update apt cache
+    - name: Converge | Update apt cache
       become: true
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 600
       changed_when: false
       when: >
-        ansible_os_family == "Debian"
+        ansible_facts['os_family'] == "Debian"
 
-    - name: ⏳ Converge | Wait for systemd to complete initialization
+    - name: Converge | Wait for systemd to complete initialization
       become: true
       ansible.builtin.systemd:
         name: multi-user.target
@@ -26,7 +26,7 @@
       retries: 30
       delay: 5
       when: >
-        ansible_service_mgr == 'systemd'
+        ansible_facts['service_mgr'] == 'systemd'
       changed_when: false
       failed_when: false
 
@@ -34,8 +34,8 @@
     # Mock GitHub configuration for testing
     github_runner_access_token: "ghp_mock_token_for_testing_only"
     github_runner_organization: "test-org"
-    github_runner_name: "test-runner-{{ ansible_hostname }}"
-    github_runner_labels: "test,molecule,{{ ansible_distribution | lower }}"
+    github_runner_name: "test-runner-{{ ansible_facts['hostname'] }}"
+    github_runner_labels: "test,molecule,{{ ansible_facts['distribution'] | lower }}"
 
     # Enable logging features for comprehensive testing
     github_runner_logging_enabled: true
@@ -74,11 +74,11 @@
     - role: ../../..
 
   post_tasks:
-    - name: 📊 Converge | Display role execution summary
+    - name: Converge | Display role execution summary
       ansible.builtin.debug:
         msg:
-          - "✅ GitHub Runner role execution completed"
-          - "🔧 Installation: Completed"
-          - "⚙️ Configuration: Applied"
-          - "📁 Logging: Configured"
-          - "👤 User: Created"
+          - "GitHub Runner role execution completed"
+          - "Installation: Completed"
+          - "Configuration: Applied"
+          - "Logging: Configured"
+          - "User: Created"
