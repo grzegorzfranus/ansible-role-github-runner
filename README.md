@@ -6,20 +6,20 @@
 
 This Ansible role installs and configures GitHub Actions Runner for repository and organization-level automation. It provides a comprehensive solution for self-hosted runner deployment with dedicated system user management, latest version installation, and robust systemd service configuration.
 
-## ✨ Features
+## Features
 
-- 🚀 **Automatic Latest Version**: Downloads and installs the latest GitHub Runner or specific versions
-- 👤 **Dedicated User Management**: Creates system users with optional sudo privileges for secure execution
-- 🔧 **Dual Mode Support**: Configures runners for both repository-level and organization-level automation
-- 🛡️ **Security Hardening**: Implements systemd security features and file permission controls
-- 🔄 **Service Management**: Complete systemd integration with restart policies and resource limits
-- 📊 **Comprehensive Logging**: Detailed logging with journal integration and debug capabilities
-- 🌐 **Network Configuration**: Proxy support and SSL verification controls
-- 🔍 **Health Verification**: Built-in verification and connectivity testing
-- 📦 **Package Dependencies**: Automatic installation of required and optional dependencies
-- 🧪 **Testing Framework**: Full verification suite for deployment validation
+- **Automatic Latest Version**: Downloads and installs the latest GitHub Runner or specific versions
+- **Dedicated User Management**: Creates system users with optional sudo privileges for secure execution
+- **Dual Mode Support**: Configures runners for both repository-level and organization-level automation
+- **Security Hardening**: Implements systemd security features and file permission controls
+- **Service Management**: Complete systemd integration with restart policies and resource limits
+- **Comprehensive Logging**: Detailed logging with journal integration and debug capabilities
+- **Network Configuration**: Proxy support and SSL verification controls
+- **Health Verification**: Built-in verification and connectivity testing
+- **Package Dependencies**: Automatic installation of required and optional dependencies
+- **Testing Framework**: Full verification suite for deployment validation
 
-## 🎯 Architecture
+## Architecture
 
 The role provides flexible GitHub Actions Runner deployment supporting both:
 
@@ -32,7 +32,7 @@ GitHub Repository/Organization ←→ Self-Hosted Runner ←→ Local Resources
          (source)                    (this host)         (execution)
 ```
 
-## 📋 Requirements
+## Requirements
 
 - **Ansible**: 2.15 or higher
 - **Network**: Internet access for GitHub connectivity and runner downloads
@@ -51,7 +51,7 @@ List of officially supported operating systems:
 
 ### Ansible version
 
-Ansible >= 2.15
+Ansible >= 2.20
 
 ### Python version
 
@@ -63,7 +63,7 @@ The role uses facts gathered by Ansible on the remote host. If you disable the S
 ### Root access
 This role requires root access for some tasks. Make sure that you are using a user with root privileges.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Basic Repository Runner Setup
 
@@ -77,7 +77,7 @@ This role requires root access for some tasks. Make sure that you are using a us
       vars:
         github_runner_repository_url: "owner/repository"
         github_runner_access_token: "ghp_your_personal_access_token"
-        github_runner_name: "{{ ansible_hostname }}-repo-runner"
+        github_runner_name: "{{ ansible_facts['hostname'] }}-repo-runner"
         github_runner_labels: "ubuntu-24.04,self-hosted,production"
 ```
 
@@ -93,7 +93,7 @@ This role requires root access for some tasks. Make sure that you are using a us
       vars:
         github_runner_organization: "my-organization"
         github_runner_access_token: "ghp_your_personal_access_token"
-        github_runner_name: "{{ ansible_hostname }}-org-runner"
+        github_runner_name: "{{ ansible_facts['hostname'] }}-org-runner"
         github_runner_group: "production"
         github_runner_user_sudo_enabled: true
 ```
@@ -110,13 +110,13 @@ This role requires root access for some tasks. Make sure that you are using a us
       vars:
         github_runner_organization: "my-organization"
         github_runner_access_token: "ghp_your_personal_access_token"
-        github_runner_name: "{{ ansible_hostname }}-deploy-runner"
-        github_runner_labels: "deployment,production,{{ ansible_distribution | lower }}"
+        github_runner_name: "{{ ansible_facts['hostname'] }}-deploy-runner"
+        github_runner_labels: "deployment,production,{{ ansible_facts['distribution'] | lower }}"
         
         # Enable SSH key generation for deployment
         github_runner_user_generate_ssh_key: true
         github_runner_user_ssh_key_type: "ed25519"
-        github_runner_user_ssh_key_comment: "github-runner@{{ ansible_hostname }}-deploy"
+        github_runner_user_ssh_key_comment: "github-runner@{{ ansible_facts['hostname'] }}-deploy"
         
         # Enable sudo for deployment tasks
         github_runner_user_sudo_enabled: true
@@ -135,8 +135,8 @@ This role requires root access for some tasks. Make sure that you are using a us
       vars:
         github_runner_organization: "my-organization"
         github_runner_access_token: "ghp_your_personal_access_token"
-        github_runner_name: "{{ ansible_hostname }}-production-runner"
-        github_runner_labels: "production,{{ ansible_distribution | lower }},self-hosted"
+        github_runner_name: "{{ ansible_facts['hostname'] }}-production-runner"
+        github_runner_labels: "production,{{ ansible_facts['distribution'] | lower }},self-hosted"
         
         # Enable professional RSyslog-based logging (recommended)
         github_runner_logging_enabled: true
@@ -178,7 +178,7 @@ ansible-playbook -i inventory github-runner-setup.yml
         github_runner_state: "absent"
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Default Configuration
 
@@ -242,7 +242,7 @@ Customize for specific requirements:
     - role: grzegorzfranus.github_runner
 ```
 
-## 📊 Variables
+## Variables
 
 ### General Options
 
@@ -275,7 +275,7 @@ Customize for specific requirements:
 | `github_runner_access_token` | GitHub personal access token | `""` |
 | `github_runner_repo_url_direct` | Direct repository URL (alternative to repository_url) | `""` |
 | `github_runner_token_direct` | Registration token (alternative to access_token) | `""` |
-| `github_runner_name` | Runner name | `"{{ ansible_hostname }}"` |
+| `github_runner_name` | Runner name | `"{{ ansible_facts['hostname'] }}"` |
 | `github_runner_group` | Runner group name | `""` |
 | `github_runner_labels` | Runner labels (comma-separated) | Auto-generated |
 | `github_runner_work_dir` | Runner work directory | `"{{ github_runner_install_dir }}/_work"` |
@@ -389,7 +389,7 @@ Customize for specific requirements:
 | `github_runner_min_disk_space_gb` | Minimum required disk space in GB | `10` |
 | `github_runner_min_memory_mb` | Minimum required memory in MB | `512` |
 
-## 🔍 Verification
+## Verification
 
 After deployment, verify the runner installation and connectivity:
 
@@ -445,14 +445,14 @@ sudo logrotate -d /etc/logrotate.d/github-runner
 sudo grep "github-runner" /var/log/syslog | tail -5
 ```
 
-## 🛡️ Security Features
+## Security Features
 
-- ✅ **Dedicated System User**: Isolated execution environment with minimal privileges
-- ✅ **Systemd Security**: Comprehensive security restrictions and sandboxing
-- ✅ **File Permissions**: Secure file ownership and access controls
-- ✅ **Resource Limits**: Memory, CPU, and process limits to prevent resource exhaustion
-- ✅ **Network Security**: Proxy support and SSL verification controls
-- ✅ **Optional Sudo**: Configurable privilege escalation with logging
+- **Dedicated System User**: Isolated execution environment with minimal privileges
+- **Systemd Security**: Comprehensive security restrictions and sandboxing
+- **File Permissions**: Secure file ownership and access controls
+- **Resource Limits**: Memory, CPU, and process limits to prevent resource exhaustion
+- **Network Security**: Proxy support and SSL verification controls
+- **Optional Sudo**: Configurable privilege escalation with logging
 
 #### Secrets handling
 - Store `github_runner_access_token` in Ansible Vault. Example:
@@ -478,7 +478,7 @@ github_runner_verify_ssl: true
 github_runner_disable_telemetry: true
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Service won't start
 
@@ -535,7 +535,7 @@ groups github-runner
 sudo -l -U github-runner
 ```
 
-## 📁 File Structure
+## File Structure
 
 ```
 ansible-role-github-runner/
@@ -571,7 +571,7 @@ ansible-role-github-runner/
 └── README.md               # This documentation file
 ```
 
-## 🏷️ Tags
+## Tags
 
 - `always` - Tasks that always run (variable loading and validation)
 - `setup` - Setup tasks including prerequisites, installation, and configuration
@@ -586,7 +586,7 @@ ansible-role-github-runner/
 - `service` - Service management tasks
 - `verify` - Verification and health check tasks
 
-## 📖 Example Playbook
+## Example Playbook
 
 ```yaml
 ---
@@ -602,7 +602,7 @@ ansible-role-github-runner/
         # GitHub Configuration
         github_runner_repository_url: "myorg/myrepo"
         github_runner_access_token: "{{ github_token }}"
-        github_runner_name: "{{ ansible_hostname }}-runner"
+        github_runner_name: "{{ ansible_facts['hostname'] }}-runner"
         github_runner_labels: "ubuntu-22.04,self-hosted,production"
         
         # User Configuration
@@ -661,7 +661,7 @@ ansible-role-github-runner/
         github_runner_ephemeral: true
 ```
 
-## 🧪 Testing
+## Testing
 
 This role includes comprehensive testing infrastructure using Molecule and GitHub Actions CI/CD.
 
@@ -733,16 +733,16 @@ ansible-lint .
 The role features GitHub Actions workflows for automated quality assurance:
 
 **Test & Validation Pipeline** (`.github/workflows/test-and-validation.yml`):
-- ✅ Triggered on push to `main` and pull requests
-- ✅ YAML linting with `yamllint` for code quality
-- ✅ Molecule testing across Ubuntu 24.04 and Debian 12
-- ✅ Matrix strategy for parallel testing
-- ✅ Production-level validation with `ansible-lint`
+- Triggered on push to `main` and pull requests
+- YAML linting with `yamllint` for code quality
+- Molecule testing across Ubuntu 24.04 and Debian 12
+- Matrix strategy for parallel testing
+- Production-level validation with `ansible-lint`
 
 **Galaxy Publishing Pipeline** (`.github/workflows/publish-to-galaxy.yml`):
-- ✅ Triggered on GitHub release creation
-- ✅ Automatic role publishing to Ansible Galaxy
-- ✅ Secure API key management through GitHub secrets
+- Triggered on GitHub release creation
+- Automatic role publishing to Ansible Galaxy
+- Secure API key management through GitHub secrets
 
 #### Test Environment Features
 - **Mock GitHub Authentication**: Safe testing without real GitHub API calls
@@ -777,13 +777,13 @@ provisioner:
 ### Quality Standards
 
 The role maintains production-level quality through:
-- ✅ **100% Test Coverage**: All role functionality validated
-- ✅ **Multi-Distribution Support**: Tested across major Linux distributions
-- ✅ **Professional Patterns**: Following established collection standards
-- ✅ **Automated Quality Gates**: Prevents regression through CI/CD
-- ✅ **Mock Testing**: Safe testing without external dependencies
+- **100% Test Coverage**: All role functionality validated
+- **Multi-Distribution Support**: Tested across major Linux distributions
+- **Professional Patterns**: Following established collection standards
+- **Automated Quality Gates**: Prevents regression through CI/CD
+- **Mock Testing**: Safe testing without external dependencies
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, bug reports, and feature requests are welcome!
 
@@ -795,10 +795,10 @@ Contributions, bug reports, and feature requests are welcome!
 
 If you have questions or suggestions, feel free to open an issue or contact the author via GitHub.
 
-## 📝 License
+## License
 
 This project is licensed under the Apache-2.0 License - see the LICENSE file for details.
 
-## 👥 Author Information
+## Author Information
 
 This role was created by [Grzegorz Franus](https://github.com/grzegorzfranus).
