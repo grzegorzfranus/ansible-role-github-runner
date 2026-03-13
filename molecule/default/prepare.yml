@@ -2,6 +2,18 @@
 # =============================================================================
 # Ansible Role: GitHub Runner - Molecule Preparation Playbook
 # =============================================================================
+# This playbook prepares the Molecule Docker container environment before the
+# role itself is tested. It simulates prerequisites that would normally exist
+# on a real server.
+#
+# Flow:
+#   1. Fix /etc/shadow permissions for the container environment
+#   2. Ensure essential directories exist 
+#   3. Update package caches and install basic test dependencies 
+#   4. Start and prepare mock rsyslog service
+#   5. Wait for systemd to settle
+#   6. Create target test directories and mock GitHub API responses
+# =============================================================================
 
 - name: Molecule | Prepare
   hosts: all

@@ -25,20 +25,6 @@ galaxy_info:
         - ubuntu
         - ubuntu22
         - ubuntu24
-    - name: EL
-      versions:
-        - "9"
-      galaxy_tags:
-        - el
-        - el9
-        - rhel
-        - rhel9
-    - name: Rocky
-      versions:
-        - "9.0"
-      galaxy_tags:
-        - rocky
-        - rocky9
 
   galaxy_tags:
     - github

@@ -77,16 +77,6 @@
     - install
     - packages
 
-- name: GitHub Runner | prerequisites | Update package cache (RedHat/CentOS)
-  become: true
-  ansible.builtin.dnf:
-    update_cache: true
-  when: >
-    ansible_facts['os_family'] == 'RedHat'
-  tags:
-    - install
-    - packages
-
 # -----------------------------------------------------------------------------
 # 3. Required Dependencies Installation
 # -----------------------------------------------------------------------------
@@ -98,17 +88,6 @@
     update_cache: false
   when: >
     ansible_facts['os_family'] == 'Debian'
-  tags:
-    - install
-    - packages
-
-- name: GitHub Runner | prerequisites | Install required dependencies (RedHat/CentOS)
-  become: true
-  ansible.builtin.dnf:
-    name: "{{ github_runner_dependencies }}"
-    state: present
-  when: >
-    ansible_facts['os_family'] == 'RedHat'
   tags:
     - install
     - packages

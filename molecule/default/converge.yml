@@ -2,6 +2,15 @@
 # =============================================================================
 # Ansible Role: GitHub Runner - Molecule Convergence Playbook
 # =============================================================================
+# This playbook invokes the GitHub Runner role with mock configuration parameters
+# to test the role's execution in a Molecule-provisioned Docker container.
+#
+# Flow:
+#   1. Pre-tasks: Handle apt cache updates and systemd initialization wait
+#   2. Variables: Set mock tokens, test user, test paths, enable debug
+#   3. Roles: Execute the ansible-role-github-runner role
+#   4. Post-tasks: Display completion summary
+# =============================================================================
 
 - name: Molecule | Converge
   hosts: all

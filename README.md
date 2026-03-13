@@ -46,8 +46,6 @@ List of officially supported operating systems:
 | Ubuntu | 24.04 (Noble) | ![✓](https://img.shields.io/badge/✓-brightgreen.svg) |
 | Ubuntu | 22.04 (Jammy) | ![✓](https://img.shields.io/badge/✓-brightgreen.svg) |
 | Debian | 12 (Bookworm) | ![✓](https://img.shields.io/badge/✓-brightgreen.svg) |
-| Rocky Linux | 9 | ![✓](https://img.shields.io/badge/✓-brightgreen.svg) |
-| Oracle Linux | 9 | ![✓](https://img.shields.io/badge/✓-brightgreen.svg) |
 
 ### Ansible version
 
