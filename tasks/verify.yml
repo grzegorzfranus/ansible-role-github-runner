@@ -123,12 +123,30 @@
 # -----------------------------------------------------------------------------
 # 4. Runner Version Verification
 # -----------------------------------------------------------------------------
+- name: GitHub Runner | verify | Get installed runner version
+  ansible.builtin.shell: |
+    set -o pipefail
+    ./bin/Runner.Listener --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown"
+  args:
+    executable: /bin/bash
+    chdir: "{{ github_runner_install_dir }}"
+  become: true
+  become_user: "{{ github_runner_user }}"
+  register: _github_runner_verify_version
+  changed_when: false
+  check_mode: false
+  when: not (github_runner_test_mode | default(false))
+  tags:
+    - verify
+    - version
+
 - name: GitHub Runner | verify | Display runner version
   ansible.builtin.debug:
-    msg: "GitHub Runner version: {{ _github_runner_installed_version.stdout | default('unknown') }}"
+    msg: "GitHub Runner version: {{ _github_runner_verify_version.stdout | default('unknown') }}"
   when: >
-    _github_runner_installed_version is defined and
-    _github_runner_installed_version.stdout != "unknown"
+    _github_runner_verify_version is defined and
+    _github_runner_verify_version is not skipped and
+    (_github_runner_verify_version.stdout | default('unknown')) != 'unknown'
   tags:
     - verify
     - version
@@ -361,7 +379,7 @@
     msg:
       - "GitHub Runner Verification Report:"
       - "Installation: Complete ({{ github_runner_install_dir }})"
-      - "Version: {{ _github_runner_installed_version.stdout | default('Unknown') }}"
+      - "Version: {{ _github_runner_verify_version.stdout | default('Unknown') }}"
       - "User: {{ github_runner_user }} ({{ _github_runner_verify_ownership.stat.pw_name }}:{{ _github_runner_verify_ownership.stat.gr_name }})"
       - >-
         Service: {{
@@ -404,7 +422,7 @@
             _github_runner_verify_install_dir.stat.exists and
             _github_runner_verify_service.status.ActiveState == 'active' and
             _github_runner_verify_connectivity.status == 200 and
-            (_github_runner_installed_version.stdout | default('unknown')) != 'unknown'
+            (_github_runner_verify_version.stdout | default('unknown')) != 'unknown'
           )
         ) else 'unhealthy'
       }}
