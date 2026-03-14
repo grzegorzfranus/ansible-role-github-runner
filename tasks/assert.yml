@@ -7,13 +7,13 @@
 # These validations help prevent configuration errors and ensure secure defaults.
 #
 # Flow:
-# 1. General Settings Assertions
-# 2. Installation Settings Assertions
-# 3. GitHub Configuration Assertions
-# 4. User Management Assertions
-# 5. Service Configuration Assertions
-# 6. Security Settings Assertions
-# 7. System Requirements Assertions
+#   1. General Settings Assertions    - validate role_action, state, enabled
+#   2. Installation Settings          - validate version, arch, OS, paths, URLs
+#   3. GitHub Configuration           - validate token, org/repo, runner name
+#   4. User Management Assertions     - validate user, group, home, SSH settings
+#   5. Service Configuration          - validate service name, state, timeouts
+#   6. Security Settings              - validate SSL, proxy, sudo settings
+#   7. System Requirements            - validate disk space, memory minimums
 # =============================================================================
 
 # -----------------------------------------------------------------------------

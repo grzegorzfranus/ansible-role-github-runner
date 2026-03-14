@@ -7,11 +7,13 @@
 # meets minimum requirements and has all necessary packages installed.
 #
 # Flow:
-# 1. Check system resources
-# 2. Update package cache
-# 3. Install required dependencies
-# 4. Install optional dependencies
-# 5. Verify systemd availability
+#   1. System Resource Validation     - check disk space and available memory
+#   2. Package Management Setup       - update apt cache (Debian/Ubuntu)
+#   3. Required Dependencies          - install required system packages
+#   4. System Service Verification    - verify systemd is available
+#   5. Network Connectivity Check     - test GitHub API and releases endpoints
+#   6. Security Prerequisites         - check sudo availability if enabled
+#   7. Prerequisites Summary          - display aggregated readiness report
 # =============================================================================
 
 # -----------------------------------------------------------------------------

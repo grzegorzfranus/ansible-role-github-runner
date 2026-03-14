@@ -5,6 +5,26 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-03-14
+
+### Changed
+- Migrated `shell` to `command` module where pipes are not needed (prerequisites.yml)
+- Replaced `sudo -u` shell patterns with native Ansible `become_user` (install.yml, configure.yml, verify.yml)
+- Added `block/rescue` error handling with rollback for install and configure operations
+- Reduced verification duplication by consolidating redundant checks in verify.yml
+- Guarded verbose debug tasks with `github_runner_debug` condition
+- Added `{{ ansible_managed | comment }}` header to all Jinja2 templates
+- Fixed hardcoded SSH home path in user.yml — now uses configurable `github_runner_user_home`
+- Corrected `changed_when` values for state-modifying tasks
+- Improved `failed_when` specificity — replaced blanket `false` with explicit exit code checks
+- Added `--token` parameter to remove.yml for proper runner unregistration
+
+### Added
+- New `github_runner_test_mode` variable in defaults for explicit test mode documentation
+
+### Fixed
+- SSH key management no longer overrides user home directory with hardcoded `/home/` path
+
 ## [1.1.2] - 2026-03-14
 
 ### Changed

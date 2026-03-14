@@ -7,11 +7,11 @@
 # to provide complete operational visibility.
 #
 # Flow:
-# 1. Log Directory Management
-# 2. RSyslog Integration (Professional Approach)
-# 3. Systemd Service Override Configuration
-# 4. Log Rotation Configuration
-# 5. Backward Compatibility (Direct File Logging)
+#   1. Log Directory Management       - create log dir with correct permissions
+#   2. RSyslog Integration            - deploy rsyslog config, restart service
+#   3. Systemd Service Override       - add journald StandardOutput/Error overrides
+#   4. Log Rotation Configuration     - deploy logrotate config from template
+#   5. Logging Status Summary         - display logging setup report
 # =============================================================================
 
 # -----------------------------------------------------------------------------
