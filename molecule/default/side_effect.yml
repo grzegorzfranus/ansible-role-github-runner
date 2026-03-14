@@ -1,8 +1,0 @@
----
-- name: Uninstall
-  hosts: all
-  vars:
-    github_runner_state: absent
-    github_runner_test_mode: true
-  roles:
-    - role: grzegorzfranus.github_runner

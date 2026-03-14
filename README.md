@@ -676,7 +676,6 @@ molecule/
     ├── molecule.yml     # Test configuration with Docker and distribution matrix
     ├── prepare.yml      # Environment preparation and dependency installation
     ├── converge.yml     # Role execution with test configuration
-    ├── side_effect.yml  # Runner uninstall flow testing (state: absent)
     └── verify.yml       # Comprehensive validation testing (8 categories, 15+ tests)
 ```
 
