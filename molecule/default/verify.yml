@@ -2,6 +2,17 @@
 # =============================================================================
 # Ansible Role: GitHub Runner - Molecule Verification Playbook
 # =============================================================================
+# This playbook validates that the GitHub Runner role executed correctly by
+# asserting the state of the system against expected outcomes.
+#
+# Flow:
+#   1. Validate user and group creation
+#   2. Validate directory structure and permissions
+#   3. Assert RSyslog and logrotate configurations contain proper rules
+#   4. Validate required package dependencies
+#   5. Test service state (RSyslog running)
+#   6. Verify systemd template processing and daemon-reload
+# =============================================================================
 
 - name: Molecule | Verify Role
   hosts: all

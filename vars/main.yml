@@ -39,15 +39,10 @@ github_runner_user_ssh_public_key: "{{ github_runner_user_ssh_dir }}/id_{{ githu
 # Supported Operating Systems
 github_runner_supported_os_families:
   - "Debian"
-  - "RedHat"
 
 github_runner_supported_distributions:
   - "Ubuntu"
   - "Debian"
-  - "CentOS"
-  - "Rocky"
-  - "AlmaLinux"
-  - "OracleLinux"
 
 # Note: Package managers, states, scopes and default labels are handled inline in tasks
 

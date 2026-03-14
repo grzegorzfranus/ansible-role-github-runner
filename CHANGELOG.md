@@ -5,6 +5,15 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-03-14
+
+### Changed
+- Expanded CI test matrix to include `ubuntu2204`.
+- Added detailed documentation and flow headers to all `molecule/` playbooks (`converge.yml`, `prepare.yml`, `verify.yml`) for better maintainability.
+
+### Removed
+- Fully dropped support for Oracle Linux and Rocky Linux as they were untested and lacked viable Molecule test images. Removed all related variables, platform metadata, and documentation claims.
+
 ## [1.1.1] - 2026-03-12
 
 ### Changed
