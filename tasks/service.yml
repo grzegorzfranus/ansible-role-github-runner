@@ -7,12 +7,17 @@
 # and ensures proper service configuration.
 #
 # Flow:
-# 1. Create systemd service file
-# 2. Create service override directory
-# 3. Configure service limits and environment
-# 4. Reload systemd daemon
-# 5. Enable and start service
-# 6. Verify service status
+#   1.  Service File Creation         - deploy systemd unit from template
+#   2.  Service Limits & Environment  - deploy override.conf with resource limits
+#   3.  Service Environment File      - deploy runner environment variables
+#   4.  Systemd Daemon Management     - reload daemon when unit files change
+#   5.  Service State Management      - check status, enable/start/stop as needed
+#   6.  Service Status Verification   - confirm active state matches target
+#   7.  Service Health Check          - wait for stability, validate health
+#   8.  Process Information           - list Runner.Listener/Worker processes
+#   9.  Service Configuration Valid.  - verify service and override files exist
+#  10.  Service Management Summary    - display service status report
+#  11.  Service Logs Display          - show recent journald entries
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -155,6 +160,8 @@
       - "Current Unit State: {{ _github_runner_current_service_status.status.UnitFileState | default('unknown') }}"
       - "Current Sub State: {{ _github_runner_current_service_status.status.SubState | default('unknown') }}"
       - "Status Defined: {{ _github_runner_current_service_status.status is defined }}"
+  when: >
+    github_runner_debug | default(false)
   tags:
     - service
     - check
@@ -191,6 +198,8 @@
       - "- Need stop: {{ github_runner_service_state == 'stopped' and _github_runner_current_service_status.status.ActiveState | default('unknown') not in ['inactive', 'failed'] }}"
       - "- Need enable: {{ github_runner_service_enabled and _github_runner_current_service_status.status.UnitFileState | default('unknown') != 'enabled' }}"
       - "- Need disable: {{ not github_runner_service_enabled and _github_runner_current_service_status.status.UnitFileState | default('unknown') != 'disabled' }}"
+  when: >
+    github_runner_debug | default(false)
   tags:
     - service
     - check
@@ -348,7 +357,8 @@
     msg: "{{ _github_runner_processes.stdout_lines }}"
   when: >
     github_runner_service_state == "started" and
-    _github_runner_processes.stdout_lines | length > 0
+    _github_runner_processes.stdout_lines | length > 0 and
+    github_runner_debug | default(false)
   tags:
     - service
     - processes

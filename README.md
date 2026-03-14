@@ -34,7 +34,7 @@ GitHub Repository/Organization ←→ Self-Hosted Runner ←→ Local Resources
 
 ## Requirements
 
-- **Ansible**: 2.15 or higher
+- **Ansible**: 2.20 or higher
 - **Network**: Internet access for GitHub connectivity and runner downloads
 - **Privileges**: sudo/root access on target hosts
 - **Collections**: `community.crypto` (for SSH key generation feature)
@@ -249,6 +249,7 @@ Customize for specific requirements:
 | `github_runner_role_action` | Define which parts of the role to execute (Options: 'all', 'prerequisites', 'user', 'install', 'logging', 'configure', 'service') | `"all"` |
 | `github_runner_enabled` | Enable/disable GitHub Runner installation | `true` |
 | `github_runner_debug` | Enable debug mode for troubleshooting | `false` |
+| `github_runner_test_mode` | Enable test mode (used by Molecule tests to skip real GitHub API calls) | `false` |
 
 ### Installation Configuration
 
@@ -552,7 +553,8 @@ ansible-role-github-runner/
 │   ├── logging.yml          # Dedicated logging configuration and logrotate setup
 │   ├── configure.yml        # Runner registration and configuration
 │   ├── service.yml          # Systemd service management
-│   └── verify.yml           # Installation verification and health checks
+│   ├── verify.yml           # Installation verification and health checks
+│   └── remove.yml           # Runner uninstallation (state: absent)
 ├── templates/
 │   ├── github-runner.service.j2    # Systemd service configuration
 │   ├── service-override.conf.j2    # Service resource limits
@@ -679,8 +681,8 @@ molecule/
 
 #### Supported Test Distributions
 - **Ubuntu 24.04** (Noble Numbat)
+- **Ubuntu 22.04** (Jammy Jellyfish)
 - **Debian 12** (Bookworm)
-- **Rocky Linux 9** (Blue Onyx)
 
 #### Test Categories
 1. **User & Group Management**: Verify user/group creation, home directory, shell configuration

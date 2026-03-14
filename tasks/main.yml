@@ -2,20 +2,21 @@
 # =============================================================================
 # Ansible Role: GitHub Runner - Main Tasks
 # =============================================================================
-# This is the main task file for the GitHub Runner role. It orchestrates the execution
-# of all role components in the correct order. Each task is tagged appropriately
-# to allow for selective execution.
+# This is the main task file for the GitHub Runner role. It orchestrates the
+# execution of all role components in the correct order. Each task is tagged
+# appropriately to allow for selective execution.
 #
 # Flow:
-# 1. Load OS-specific variables
-# 2. Validate role requirements and variables
-# 3. Check system prerequisites
-# 4. Create dedicated user (optional)
-# 5. Install GitHub Runner
-# 6. Configure dedicated logging (optional)
-# 7. Configure GitHub Runner
-# 8. Setup systemd service
-# 9. Verify installation (optional)
+#   1.  OS-Specific Variables         - load distro/family-specific vars
+#   2.  Variable Validation           - assert all required vars are valid
+#   3.  System Prerequisites          - verify resources, install dependencies
+#   4.  User Management               - create dedicated user, group, SSH keys
+#   5.  Package Installation          - download, extract, set permissions
+#   6.  Logging Configuration         - rsyslog, logrotate, journald overrides
+#   7.  Runner Configuration          - register runner with GitHub API
+#   8.  Service Management            - systemd unit, enable, start
+#   9.  Installation Verification     - end-to-end health check
+#  10.  Uninstall Flow                - remove runner when state=absent
 # =============================================================================
 
 # -----------------------------------------------------------------------------

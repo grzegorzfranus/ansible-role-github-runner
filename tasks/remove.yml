@@ -4,6 +4,15 @@
 # =============================================================================
 # Idempotently stop service, unregister runner, and remove files when
 # github_runner_state == 'absent'.
+#
+# Flow:
+#   1. Stop Service                   - stop systemd service (ignore if missing)
+#   2. Check Installation Directory   - verify install dir exists before removal
+#   3. Setup Remove Token             - prepare --token argument if available
+#   4. Unregister Runner              - run config.sh remove via become_user
+#   5. Remove Systemd Files           - delete service file and override dir
+#   6. Remove Installation Directory  - delete runner install directory
+#   7. Remove Logging Configuration   - delete logrotate and rsyslog configs
 # =============================================================================
 
 - name: GitHub Runner | remove | Stop service if present
@@ -20,20 +29,28 @@
   register: _github_runner_remove_install_dir
   tags: [remove, check]
 
+- name: GitHub Runner | remove | Setup remove token argument
+  ansible.builtin.set_fact:
+    _github_runner_remove_token_arg: >-
+      {{ '--token "' + (_github_runner_registration_token | default('')) + '"' if (_github_runner_registration_token | default('')) | length > 0 else '' }}
+  tags: [remove]
+
 - name: GitHub Runner | remove | Unregister runner if configured
   become: true
+  become_user: "{{ github_runner_user }}"
   ansible.builtin.shell: |
-    cd "{{ github_runner_install_dir }}"
     if [ -x ./config.sh ]; then
-      sudo -u "{{ github_runner_user }}" ./config.sh remove --unattended || true
+      ./config.sh remove --unattended {{ _github_runner_remove_token_arg }} || true
     fi
   args:
     executable: /bin/bash
+    chdir: "{{ github_runner_install_dir }}"
   when: >
     _github_runner_remove_install_dir.stat.exists
   no_log: true
-  changed_when: false
-  failed_when: false
+  register: _github_runner_remove_result
+  changed_when: _github_runner_remove_result.rc == 0
+  failed_when: _github_runner_remove_result.rc not in [0, 1, 2]
   tags: [remove]
 
 - name: GitHub Runner | remove | Remove systemd service file

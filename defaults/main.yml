@@ -33,6 +33,9 @@ github_runner_enabled: true
 # Enable debug mode for troubleshooting
 github_runner_debug: false
 
+# Enable test mode (used by Molecule tests to skip real GitHub API calls)
+github_runner_test_mode: false
+
 # -----------------------------------------------------------------------------
 # 2. GitHub Runner Installation
 # -----------------------------------------------------------------------------
