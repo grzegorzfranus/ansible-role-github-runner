@@ -65,91 +65,43 @@
     - prerequisites
 
 # -----------------------------------------------------------------------------
-# 4. User Management
+# 4. Single-Instance / Multi-Instance Execution Branch
 # -----------------------------------------------------------------------------
-- name: GitHub Runner | user | Create dedicated system user
-  ansible.builtin.include_tasks: user.yml
+
+# Snapshot original variable values before multi-instance loop.
+# Without this, set_fact in instance.yml permanently overwrites variables
+# during iteration 1, causing iteration 2+ to read already-modified values
+# (e.g. /opt/actions-runner-01 -> /opt/actions-runner-01-02).
+- name: GitHub Runner | playbook | Snapshot base variables for multi-instance loop
+  ansible.builtin.set_fact:
+    _base_install_dir: "{{ github_runner_install_dir }}"
+    _base_work_dir: "{{ github_runner_work_dir }}"
+    _base_labels: "{{ github_runner_labels }}"
+    _base_group: "{{ github_runner_group }}"
+    _base_ephemeral: "{{ github_runner_ephemeral }}"
+    _base_service_limits: "{{ github_runner_service_limits }}"
   when: >
-    github_runner_role_action in ['all', 'user'] and
-    github_runner_enabled | default(true) and
-    github_runner_create_user | default(true)
+    (github_runner_instances | default([])) | length > 0
   tags:
     - setup
-    - user
+    - multi_instance
 
-# -----------------------------------------------------------------------------
-# 5. Package Installation
-# -----------------------------------------------------------------------------
-- name: GitHub Runner | install | Install GitHub Runner package
-  ansible.builtin.include_tasks: install.yml
+- name: GitHub Runner | playbook | Single-runner execution mode
+  ansible.builtin.include_tasks: instance.yml
   when: >
-    github_runner_state == 'present' and
-    github_runner_role_action in ['all', 'install'] and
-    github_runner_enabled | default(true)
+    (github_runner_instances | default([])) | length == 0
   tags:
     - setup
-    - install
+    - single_instance
 
-# -----------------------------------------------------------------------------
-# 6. Logging Configuration
-# -----------------------------------------------------------------------------
-- name: GitHub Runner | logging | Configure dedicated logging
-  ansible.builtin.include_tasks: logging.yml
+- name: GitHub Runner | playbook | Multi-runner execution mode
+  ansible.builtin.include_tasks: instance.yml
+  loop: "{{ github_runner_instances }}"
+  loop_control:
+    loop_var: _current_instance
+    label: "{{ _current_instance.id }}"
   when: >
-    github_runner_role_action in ['all', 'logging'] and
-    github_runner_enabled | default(true) and
-    github_runner_logging_enabled | default(false)
+    (github_runner_instances | default([])) | length > 0
   tags:
     - setup
-    - logging
-
-# -----------------------------------------------------------------------------
-# 7. Runner Configuration
-# -----------------------------------------------------------------------------
-- name: GitHub Runner | configure | Configure GitHub Runner
-  ansible.builtin.include_tasks: configure.yml
-  when: >
-    github_runner_state == 'present' and
-    github_runner_role_action in ['all', 'configure'] and
-    github_runner_enabled | default(true)
-  tags:
-    - setup
-    - configure
-
-# -----------------------------------------------------------------------------
-# 8. Service Management
-# -----------------------------------------------------------------------------
-- name: GitHub Runner | service | Configure systemd service
-  ansible.builtin.include_tasks: service.yml
-  when: >
-    github_runner_state == 'present' and
-    github_runner_role_action in ['all', 'service'] and
-    github_runner_enabled | default(true)
-  tags:
-    - setup
-    - service
-
-# -----------------------------------------------------------------------------
-# 9. Installation Verification
-# -----------------------------------------------------------------------------
-- name: GitHub Runner | verify | Verify GitHub Runner installation
-  ansible.builtin.include_tasks: verify.yml
-  when: >
-    github_runner_state == 'present' and
-    github_runner_role_action in ['all', 'configure', 'service'] and
-    github_runner_enabled | default(true) and
-    github_runner_debug | default(false)
-  tags:
-    - verify
-    - check
-
-# -----------------------------------------------------------------------------
-# 10. Uninstall Flow (when state=absent)
-# -----------------------------------------------------------------------------
-- name: GitHub Runner | remove | Uninstall GitHub Runner
-  ansible.builtin.include_tasks: remove.yml
-  when: >
-    github_runner_state == 'absent'
-  tags:
-    - cleanup
-    - remove
+    - multi_instance

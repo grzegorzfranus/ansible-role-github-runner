@@ -8,6 +8,7 @@ This Ansible role installs and configures GitHub Actions Runner for repository a
 
 ## Features
 
+- **Multi-Instance Support**: Run multiple isolated runners concurrently on a single server
 - **Automatic Latest Version**: Downloads and installs the latest GitHub Runner or specific versions
 - **Dedicated User Management**: Creates system users with optional sudo privileges for secure execution
 - **Dual Mode Support**: Configures runners for both repository-level and organization-level automation
@@ -25,11 +26,20 @@ The role provides flexible GitHub Actions Runner deployment supporting both:
 
 - **Repository Mode**: Runners dedicated to specific GitHub repositories
 - **Organization Mode**: Shared runners available across organization repositories
+- **Multi-Instance Mode**: Multiple isolated runners running concurrently on the same server
 - **Enterprise Support**: Compatible with GitHub Enterprise Server instances
 
+**Single Runner Architecture:**
 ```
 GitHub Repository/Organization ←→ Self-Hosted Runner ←→ Local Resources
          (source)                    (this host)         (execution)
+```
+
+**Multi-Instance Architecture:**
+```
+GitHub Organization ←→ Runner-01 (github-runner-01) ←→ Local Resources
+                    ←→ Runner-02 (github-runner-02) ←→ Local Resources
+                    ←→ Runner-03 (github-runner-03) ←→ Local Resources
 ```
 
 ## Requirements
@@ -121,7 +131,33 @@ This role requires root access for some tasks. Make sure that you are using a us
         github_runner_user_sudo_nopasswd: true
 ```
 
-### 4. Runner with Professional RSyslog Logging
+### 4. Multi-Instance Runner Setup
+
+```yaml
+---
+- name: Configure Multiple Runners on Single Server
+  hosts: powerful-runners
+  become: true
+  roles:
+    - role: grzegorzfranus.github_runner
+      vars:
+        github_runner_organization: "my-organization"
+        github_runner_access_token: "ghp_your_personal_access_token"
+        
+        # Define multiple isolated runner instances
+        github_runner_instances:
+          - id: "01"
+            name: "{{ ansible_facts['hostname'] }}-prod-01"
+            labels: "linux,production,docker"
+          - id: "02"
+            name: "{{ ansible_facts['hostname'] }}-prod-02"
+            labels: "linux,production,node"
+          - id: "03"
+            name: "{{ ansible_facts['hostname'] }}-prod-03"
+            labels: "linux,production,python"
+```
+
+### 5. Runner with Professional RSyslog Logging
 
 ```yaml
 ---
@@ -283,6 +319,20 @@ Customize for specific requirements:
 | `github_runner_disable_update` | Disable automatic runner updates | `false` |
 | `github_runner_state` | Desired state of runner: `present` or `absent` | `present` |
 
+### Multi-Instance Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `github_runner_instances` | List of runner instances (empty list equals single-runner legacy mode) | `[]` |
+| `github_runner_instances[].id` | 2-digit instance identifier (e.g. "01") | required if using instances |
+| `github_runner_instances[].name` | Custom runner name | `{{ hostname }}-{{ id }}` |
+| `github_runner_instances[].labels` | Instance-specific labels | `github_runner_labels` |
+| `github_runner_instances[].group` | Runner group in GitHub | `github_runner_group` |
+| `github_runner_instances[].uid` | Optional explicit user ID for this instance | `null` (OS auto-assign) |
+| `github_runner_instances[].gid` | Optional explicit group ID for this instance | `null` (OS auto-assign) |
+| `github_runner_instances[].ephemeral` | Ephemeral mode per instance | `github_runner_ephemeral` |
+| `github_runner_instances[].service_limits` | Per-instance resource limits | `github_runner_service_limits` |
+
 ### User Management
 
 | Variable | Description | Default |
@@ -395,8 +445,12 @@ After deployment, verify the runner installation and connectivity:
 ### Check Runner Status
 
 ```bash
-# Check service status
+# Check service status (Single instance)
 sudo systemctl status actions.runner.*
+
+# Check service status (Multi-instance example)
+sudo systemctl status actions.runner.*.runner-prod-01
+sudo systemctl status actions.runner.*.runner-prod-02
 
 # View runner processes
 ps aux | grep Runner
@@ -546,6 +600,7 @@ ansible-role-github-runner/
 │   └── main.yml             # Role metadata and Galaxy information
 ├── tasks/
 │   ├── main.yml             # Main task orchestration
+│   ├── instance.yml         # Per-instance orchestration for multi-runner support
 │   ├── assert.yml           # Variable validation and compatibility checks
 │   ├── prerequisites.yml    # System requirements and dependency installation
 │   ├── user.yml             # User and group management

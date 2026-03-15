@@ -1,0 +1,143 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Instance Orchestrator
+# =============================================================================
+# This file orchestrates the setup of a single GitHub Runner instance.
+# It uses `_current_instance` if looping over `github_runner_instances`,
+# otherwise it uses the global defaults (single runner backwards compatibility).
+#
+# Flow:
+#   1. Fact Injection           - Set instance-specific variables
+#   2. User Setup               - Standard execution
+#   3. Install                  - Standard execution
+#   4. Logging                  - Standard execution
+#   5. Configure                - Standard execution
+#   6. Service Management       - Standard execution
+#   7. Verify                   - Standard execution
+#   8. Uninstallation           - Standard execution
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Fact Injection for Instance Context
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Set execution context properties - {{ _current_instance.id | default('single-mode') }}"
+  ansible.builtin.set_fact:
+    # User properties
+    github_runner_user: >-
+      {{ ('github-runner-' + _current_instance.id) if _current_instance is defined else github_runner_user }}
+    github_runner_user_group: >-
+      {{ ('github-runner-' + _current_instance.id) if _current_instance is defined else github_runner_user_group }}
+    github_runner_user_uid: >-
+      {{ _current_instance.uid | default(none) if _current_instance is defined else github_runner_user_uid }}
+    github_runner_group_gid: >-
+      {{ _current_instance.gid | default(none) if _current_instance is defined else github_runner_group_gid }}
+    github_runner_user_home: >-
+      {{ ('/home/github-runner-' + _current_instance.id) if _current_instance is defined else github_runner_user_home }}
+
+    # Path properties (use _base_ snapshot to avoid cascading overwrite)
+    github_runner_install_dir: >-
+      {{ (_base_install_dir + '-' + _current_instance.id) if _current_instance is defined else github_runner_install_dir }}
+    github_runner_work_dir: >-
+      {{ (_base_install_dir + '-' + _current_instance.id + '/_work') if _current_instance is defined else github_runner_work_dir }}
+    github_runner_log_dir: >-
+      {{ ('/var/log/github-runner-' + _current_instance.id) if _current_instance is defined else github_runner_log_dir }}
+
+    # Logic properties (use _base_ snapshot for defaults to avoid cascading overwrite)
+    github_runner_name: >-
+      {{ _current_instance.name | default(ansible_facts['hostname'] + '-' + _current_instance.id) if _current_instance is defined else github_runner_name }}
+    github_runner_labels: >-
+      {{ _current_instance.labels | default(_base_labels) if _current_instance is defined else github_runner_labels }}
+    github_runner_group: >-
+      {{ _current_instance.group | default(_base_group) if _current_instance is defined else github_runner_group }}
+    github_runner_ephemeral: >-
+      {{ _current_instance.ephemeral | default(_base_ephemeral) if _current_instance is defined else github_runner_ephemeral }}
+    github_runner_service_limits: >-
+      {{ _current_instance.service_limits | default(_base_service_limits) if _current_instance is defined else github_runner_service_limits }}
+
+    # System properties
+    github_runner_syslog_identifier: >-
+      {{ ('github-runner-' + _current_instance.id) if _current_instance is defined else github_runner_syslog_identifier }}
+    github_runner_rsyslog_config_file: >-
+      {{ ('49-github-runner-' + _current_instance.id + '.conf') if _current_instance is defined else github_runner_rsyslog_config_file }}
+
+# -----------------------------------------------------------------------------
+# 2. User Management
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Setup user and group structure - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: user.yml
+  when: >
+    github_runner_state == 'present' and
+    github_runner_role_action in ['all', 'user']
+  tags:
+    - setup
+    - user
+
+# -----------------------------------------------------------------------------
+# 3. Core Installation
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Perform installation - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: install.yml
+  when: >
+    github_runner_state == 'present' and
+    github_runner_role_action in ['all', 'install']
+  tags:
+    - setup
+    - install
+
+# -----------------------------------------------------------------------------
+# 4. Logging Configuration
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Setup logging mechanisms - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: logging.yml
+  when: >
+    github_runner_state == 'present' and
+    github_runner_role_action in ['all', 'logging']
+  tags:
+    - setup
+    - logging
+
+# -----------------------------------------------------------------------------
+# 5. Runner Configuration
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Configure GitHub Runner - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: configure.yml
+  when: >
+    github_runner_state == 'present' and
+    github_runner_role_action in ['all', 'configure']
+  tags:
+    - setup
+    - configure
+
+# -----------------------------------------------------------------------------
+# 6. Service Management
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Manage system service - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: service.yml
+  when: >
+    github_runner_state == 'present' and
+    github_runner_role_action in ['all', 'service']
+  tags:
+    - setup
+    - service
+
+# -----------------------------------------------------------------------------
+# 7. Installation Verification
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Verify health operations - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: verify.yml
+  when: >
+    github_runner_state == 'present' and
+    github_runner_role_action in ['all', 'verify']
+  tags:
+    - check
+    - verify
+
+# -----------------------------------------------------------------------------
+# 8. Uninstall Runner
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Remove GitHub Runner - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: remove.yml
+  when: >
+    github_runner_state == 'absent'
+  tags:
+    - remove

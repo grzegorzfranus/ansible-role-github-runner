@@ -263,3 +263,21 @@ github_runner_dependencies:
 # System requirements validation
 github_runner_min_disk_space_gb: 10  # Minimum free disk space in GB
 github_runner_min_memory_mb: 512     # Minimum available memory in MB
+
+# -----------------------------------------------------------------------------
+# 9. Multi-Instance Configuration
+# -----------------------------------------------------------------------------
+# Define multiple runner instances on the same server.
+# Each instance gets its own user, install directory, service, and registration.
+# When this list is empty, the role operates in single-runner (legacy) mode.
+#
+# Example:
+#   github_runner_instances:
+#     - id: "01"
+#       name: "runner-prod-01"       # Optional: defaults to {{ hostname }}-{{ id }}
+#       labels: "linux,production"   # Optional: defaults to github_runner_labels
+#     - id: "02"
+#       name: "runner-prod-02"
+#     - id: "03"
+
+github_runner_instances: []
