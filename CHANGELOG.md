@@ -5,6 +5,28 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-14
+
+### Added
+- **Multi-Instance Runner Support** — Run multiple isolated GitHub Actions Runner instances on a single server
+  - New `github_runner_instances` list variable for defining multiple runners
+  - Each instance gets its own dedicated system user, install directory, systemd service, and log configuration
+  - Automatic naming convention with 2-digit ID suffix (e.g., `01`, `02`, `03`)
+  - Per-instance customization of labels, runner group, ephemeral mode, and resource limits
+  - New `tasks/instance.yml` orchestration file for per-instance deployment
+  - Full backward compatibility — empty list preserves single-runner behavior
+
+### Changed
+- Updated `tasks/main.yml` with conditional branching for single vs multi mode
+- Extended `tasks/assert.yml` with multi-instance variable validation
+- Updated `tasks/logging.yml` with per-instance logrotate file naming
+- Updated `tasks/remove.yml` with per-instance logrotate cleanup
+- Updated `README.md` with multi-instance documentation, examples, and variables
+
+### Fixed
+- Fixed UID/GID assignment conflict in multi-instance mode by defaulting to OS auto-assignment (`null`) per iteration while preserving global values in single-runner mode
+- Fixed cascading variable override bug where `set_fact` in iteration 1 permanently modified shared variables (e.g. `install_dir`), causing iteration 2+ to produce incorrect paths (e.g. `/opt/actions-runner-01-02` instead of `/opt/actions-runner-02`)
+
 ## [1.2.0] - 2026-03-14
 
 ### Changed

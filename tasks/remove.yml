@@ -81,7 +81,7 @@
 - name: GitHub Runner | remove | Remove logrotate configuration
   become: true
   ansible.builtin.file:
-    path: "/etc/logrotate.d/github-runner"
+    path: "/etc/logrotate.d/github-runner{{ '-' + _current_instance.id if _current_instance is defined else '' }}"
     state: absent
   tags: [remove]
 

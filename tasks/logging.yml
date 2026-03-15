@@ -216,7 +216,7 @@
   become: true
   ansible.builtin.template:
     src: logrotate/github-runner.j2
-    dest: /etc/logrotate.d/github-runner
+    dest: "/etc/logrotate.d/github-runner{{ '-' + _current_instance.id if _current_instance is defined else '' }}"
     owner: root
     group: root
     mode: "0644"

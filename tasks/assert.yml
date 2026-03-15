@@ -346,3 +346,37 @@
       - github_runner_min_memory_mb > 0
     fail_msg: "Invalid minimum memory setting '{{ github_runner_min_memory_mb | default('undefined') }}'. Must be a positive number"
     success_msg: "Minimum memory requirement is valid: {{ github_runner_min_memory_mb }}MB"
+
+# -----------------------------------------------------------------------------
+# 8. Multi-Instance Configuration Assertions
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | assert | Validate instances configuration
+  ansible.builtin.assert:
+    that:
+      - github_runner_instances is defined
+      - github_runner_instances is iterable
+      - github_runner_instances | length <= 10
+    fail_msg: "Invalid instances configuration. Must be a list with max 10 entries"
+    success_msg: "Instances configuration is valid: {{ github_runner_instances | length }} instance(s)"
+
+- name: GitHub Runner | assert | Validate each instance has required fields
+  ansible.builtin.assert:
+    that:
+      - item.id is defined
+      - item.id is string
+      - item.id | length > 0
+      - item.id is match('^[0-9]{2}$')
+    fail_msg: "Instance missing required 'id' field or invalid format (must be 2 digits, e.g. '01')"
+    success_msg: "Instance {{ item.id }} configuration is valid"
+  loop: "{{ github_runner_instances }}"
+  when: >
+    github_runner_instances | length > 0
+
+- name: GitHub Runner | assert | Validate instance IDs are unique
+  ansible.builtin.assert:
+    that:
+      - github_runner_instances | map(attribute='id') | list | unique | length == github_runner_instances | length
+    fail_msg: "Duplicate instance IDs detected. Each instance must have a unique 'id'"
+    success_msg: "All instance IDs are unique"
+  when: >
+    github_runner_instances | length > 0
