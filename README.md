@@ -1,8 +1,8 @@
 # Ansible Role: GitHub Runner
 
-|Source|Version|Tests|License|
-|------|-------|-----|-------|
-|[![Source Code](https://img.shields.io/badge/source-github-blue.svg)](https://github.com/grzegorzfranus/ansible-role-github-runner)|[![Version](https://img.shields.io/github/v/release/grzegorzfranus/ansible-role-github-runner)](https://github.com/grzegorzfranus/ansible-role-github-runner/releases)|[![tests](https://github.com/grzegorzfranus/ansible-role-github-runner/actions/workflows/test-and-validation.yml/badge.svg)](https://github.com/grzegorzfranus/ansible-role-github-runner/actions)|[![Repository License](https://img.shields.io/badge/license-apache2.0-brightgreen.svg)](LICENSE)|
+|Source|Version|CI|License|
+|------|-------|--|-------|
+|[![Source Code](https://img.shields.io/badge/source-github-blue.svg)](https://github.com/grzegorzfranus/ansible-role-github-runner)|[![Version](https://img.shields.io/github/v/release/grzegorzfranus/ansible-role-github-runner)](https://github.com/grzegorzfranus/ansible-role-github-runner/releases)|[![CI](https://github.com/grzegorzfranus/ansible-role-github-runner/actions/workflows/ci.yml/badge.svg)](https://github.com/grzegorzfranus/ansible-role-github-runner/actions/workflows/ci.yml)|[![Repository License](https://img.shields.io/badge/license-apache2.0-brightgreen.svg)](LICENSE)|
 
 This Ansible role installs and configures GitHub Actions Runner for repository and organization-level automation. It provides a comprehensive solution for self-hosted runner deployment with dedicated system user management, latest version installation, and robust systemd service configuration.
 
@@ -592,6 +592,12 @@ sudo -l -U github-runner
 
 ```
 ansible-role-github-runner/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                   # CI pipeline (reusable ansible-ci.yml)
+│       └── release.yml             # Release Please + Galaxy publish
+├── .release-please-manifest.json    # Release Please version manifest
+├── release-please-config.json       # Release Please configuration
 ├── defaults/
 │   └── main.yml             # Default configuration variables
 ├── handlers/
@@ -784,20 +790,24 @@ ansible-lint .
 
 ### CI/CD Pipeline
 
-#### Automated Testing
-The role features GitHub Actions workflows for automated quality assurance:
+#### CI Pipeline
 
-**Test & Validation Pipeline** (`.github/workflows/test-and-validation.yml`):
-- Triggered on push to `main` and pull requests
-- YAML linting with `yamllint` for code quality
-- Molecule testing across Ubuntu 24.04 and Debian 12
-- Matrix strategy for parallel testing
-- Production-level validation with `ansible-lint`
+Runs on every Pull Request via centralized reusable workflow:
 
-**Galaxy Publishing Pipeline** (`.github/workflows/publish-to-galaxy.yml`):
-- Triggered on GitHub release creation
-- Automatic role publishing to Ansible Galaxy
-- Secure API key management through GitHub secrets
+1. **Branch Name Lint** — enforces naming conventions
+2. **YAML Lint** — validates all YAML files
+3. **Ansible Lint** — enforces best practices
+4. **Security Scan** — TruffleHog secret detection
+5. **Molecule Tests** — matrix across Ubuntu 24.04, Ubuntu 22.04, and Debian 12
+6. **Merge Check** — aggregated status gate for branch protection
+
+#### Release & Publish
+
+Automated via [Release Please](https://github.com/googleapis/release-please):
+
+1. Merge to `main` → Release Please creates a Release PR with changelog
+2. Merge Release PR → creates Git tag + GitHub Release
+3. Galaxy publish triggers automatically on release
 
 #### Test Environment Features
 - **Mock GitHub Authentication**: Safe testing without real GitHub API calls
@@ -842,13 +852,19 @@ The role maintains production-level quality through:
 
 Contributions, bug reports, and feature requests are welcome!
 
-- Fork the repository and create your branch from `main`.
-- Make your changes with clear, descriptive commit messages.
-- Ensure your code passes all Molecule and lint tests.
-- Submit a pull request describing your changes and the motivation.
-- For major changes, please open an issue first to discuss what you would like to change.
-
-If you have questions or suggestions, feel free to open an issue or contact the author via GitHub.
+- Fork the repository and create your branch from `main`
+- Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages:
+  - `feat:` — new features (minor version bump)
+  - `fix:` — bug fixes (patch version bump)
+  - `docs:` — documentation changes
+  - `refactor:` — code refactoring
+  - `test:` — test additions
+  - `ci:` — CI/CD changes
+  - `chore:` — maintenance tasks
+- Use branch naming convention: `feature/`, `bugfix/`, `hotfix/`, `docs/`, `refactor/`, `test/`, `chore/`, `ci/`
+- Ensure your code passes all CI checks (YAML lint, Ansible lint, Molecule tests)
+- Submit a pull request describing your changes
+- For major changes, please open an issue first to discuss what you would like to change
 
 ## License
 
