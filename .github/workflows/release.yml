@@ -17,6 +17,7 @@ jobs:
   release-please:
     name: "Release Please"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       prs_created: ${{ steps.release.outputs.prs_created }}
       release_created: ${{ steps.release.outputs.release_created }}
@@ -36,6 +37,7 @@ jobs:
     needs: [release-please]
     if: needs.release-please.outputs.prs_created == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: "Get Release PR details"
         id: pr
@@ -65,6 +67,29 @@ jobs:
 
       - name: "Lint YAML files"
         run: yamllint .
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: "Validate Galaxy metadata"
+        run: |
+          python -c '
+          import yaml
+          import sys
+          try:
+              with open("meta/main.yml", "r") as f:
+                  meta = yaml.safe_load(f)
+              desc = meta["galaxy_info"]["description"]
+              if not desc or len(desc.strip()) < 10:
+                  print("Error: galaxy_info.description is too short or empty!")
+                  sys.exit(1)
+              print("Galaxy metadata is valid.")
+          except Exception as e:
+              print(f"Validation failed: {e}")
+              sys.exit(1)
+          '
 
       - name: "Set Merge Check status on PR"
         env:
