@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.4.0...v1.4.1) (2026-05-22)
+
+
+### Miscellaneous
+
+* **ci:** align linting and gitignore configs, add workflows hardeni… ([#9](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/9)) ([1d05939](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/1d05939d9743467bec27ac22934c84b1c5c90333))
+
 ## [1.4.0](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.3.1...v1.4.0) (2026-05-21)
 
 
