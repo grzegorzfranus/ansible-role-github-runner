@@ -807,8 +807,9 @@ Runs on every Pull Request via centralized reusable workflow:
 Automated via [Release Please](https://github.com/googleapis/release-please):
 
 1. Merge to `main` → Release Please creates a Release PR with changelog
-2. Merge Release PR → creates Git tag + GitHub Release
-3. Galaxy publish triggers automatically on release
+2. **Release PR Validation** — runs automatic validations (YAML lint, Python-based Ansible Galaxy metadata schema checks) and sets the `Merge Check` status
+3. Merge Release PR → creates Git tag + GitHub Release
+4. Galaxy publish triggers automatically on release using centralized reusable workflow
 
 #### Test Environment Features
 - **Mock GitHub Authentication**: Safe testing without real GitHub API calls
