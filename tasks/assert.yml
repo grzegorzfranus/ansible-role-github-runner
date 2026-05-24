@@ -311,6 +311,24 @@
     fail_msg: "Invalid SSL verification setting '{{ github_runner_verify_ssl | default('undefined') }}'. Must be boolean (true/false)"
     success_msg: "SSL verification flag is valid: {{ github_runner_verify_ssl }}"
 
+- name: GitHub Runner | assert | Validate systemd security options
+  ansible.builtin.assert:
+    that:
+      - github_runner_service_no_new_privileges is defined
+      - github_runner_service_no_new_privileges is boolean
+      - github_runner_service_private_tmp is defined
+      - github_runner_service_private_tmp is boolean
+      - github_runner_service_protect_kernel_tunables is defined
+      - github_runner_service_protect_kernel_tunables is boolean
+      - github_runner_service_protect_kernel_modules is defined
+      - github_runner_service_protect_kernel_modules is boolean
+      - github_runner_service_protect_control_groups is defined
+      - github_runner_service_protect_control_groups is boolean
+      - github_runner_service_restrict_realtime is defined
+      - github_runner_service_restrict_realtime is boolean
+    fail_msg: "Systemd security variables must be defined and boolean (true/false)"
+    success_msg: "Systemd security variables are valid"
+
 # -----------------------------------------------------------------------------
 # 7. System Requirements Assertions
 # -----------------------------------------------------------------------------

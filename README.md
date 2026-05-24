@@ -426,6 +426,12 @@ Customize for specific requirements:
 | `github_runner_disable_analytics` | Disable analytics collection | `true` |
 | `github_runner_proxy_url` | HTTP proxy URL if needed | `""` |
 | `github_runner_no_proxy` | Comma-separated list of hosts to bypass proxy | `""` |
+| `github_runner_service_no_new_privileges` | Prevent processes from gaining new privileges (blocks `sudo` if `true`) | `false` |
+| `github_runner_service_private_tmp` | Use private `/tmp` namespace for the runner service | `false` |
+| `github_runner_service_protect_kernel_tunables` | Restrict access to kernel tunables (implicitly forces `NoNewPrivileges=yes` if `true`) | `false` |
+| `github_runner_service_protect_kernel_modules` | Restrict access to kernel modules (implicitly forces `NoNewPrivileges=yes` if `true`) | `false` |
+| `github_runner_service_protect_control_groups` | Restrict access to control groups (implicitly forces `NoNewPrivileges=yes` if `true`) | `false` |
+| `github_runner_service_restrict_realtime` | Restrict realtime scheduling (implicitly forces `NoNewPrivileges=yes` if `true`) | `false` |
 
 ### Advanced Options
 
