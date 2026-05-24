@@ -6,7 +6,7 @@
 
 This Ansible role installs and configures GitHub Actions Runner for repository and organization-level automation. It provides a comprehensive solution for self-hosted runner deployment with dedicated system user management, latest version installation, and robust systemd service configuration.
 
-## Features
+## ✨ Features
 
 - **Multi-Instance Support**: Run multiple isolated runners concurrently on a single server
 - **Automatic Latest Version**: Downloads and installs the latest GitHub Runner or specific versions
@@ -20,7 +20,7 @@ This Ansible role installs and configures GitHub Actions Runner for repository a
 - **Package Dependencies**: Automatic installation of required and optional dependencies
 - **Testing Framework**: Full verification suite for deployment validation
 
-## Architecture
+## 🎯 Architecture
 
 The role provides flexible GitHub Actions Runner deployment supporting both:
 
@@ -42,7 +42,7 @@ GitHub Organization ←→ Runner-01 (github-runner-01) ←→ Local Resources
                     ←→ Runner-03 (github-runner-03) ←→ Local Resources
 ```
 
-## Requirements
+## 📋 Requirements
 
 - **Ansible**: 2.20 or higher
 - **Network**: Internet access for GitHub connectivity and runner downloads
@@ -71,7 +71,7 @@ The role uses facts gathered by Ansible on the remote host. If you disable the S
 ### Root access
 This role requires root access for some tasks. Make sure that you are using a user with root privileges.
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Basic Repository Runner Setup
 
@@ -212,7 +212,7 @@ ansible-playbook -i inventory github-runner-setup.yml
         github_runner_state: "absent"
 ```
 
-## Configuration
+## ⚙️ Configuration
 
 ### Default Configuration
 
@@ -276,7 +276,7 @@ Customize for specific requirements:
     - role: grzegorzfranus.github_runner
 ```
 
-## Variables
+## 📊 Variables
 
 ### General Options
 
@@ -438,7 +438,22 @@ Customize for specific requirements:
 | `github_runner_min_disk_space_gb` | Minimum required disk space in GB | `10` |
 | `github_runner_min_memory_mb` | Minimum required memory in MB | `512` |
 
-## Verification
+## 📌 Role Properties
+
+| Property | Value | Description |
+|----------|-------|-------------|
+| **Idempotent** | ✅ Yes | Running the role multiple times with the same parameters produces the same result. Configuration steps and service status updates are skipped if no changes are detected. |
+| **Atomic** | ❌ No | The role can be partially applied. A failure mid-execution may leave the system in an intermediate state (e.g., packages installed but runner not registered). |
+| **Check Mode** | ✅ Supported | Most tasks work in check mode. Mutating commands (such as runner registration/unregistration) are skipped during check runs. |
+| **Diff Mode** | ✅ Supported | Template tasks support diff mode for configuration changes preview. |
+
+## 📤 Role Output
+
+This role does not set any public output facts. All internal facts use the `__github_runner_` double-underscore prefix and are not part of the public interface.
+
+To inspect diagnostic data at runtime, run the playbook with `-v` or `-vv` verbosity flags — the role provides detailed debug output at `verbosity: 1`.
+
+## 🔍 Verification
 
 After deployment, verify the runner installation and connectivity:
 
@@ -498,7 +513,7 @@ sudo logrotate -d /etc/logrotate.d/github-runner
 sudo grep "github-runner" /var/log/syslog | tail -5
 ```
 
-## Security Features
+## 🛡️ Security Features
 
 - **Dedicated System User**: Isolated execution environment with minimal privileges
 - **Systemd Security**: Comprehensive security restrictions and sandboxing
@@ -531,7 +546,26 @@ github_runner_verify_ssl: true
 github_runner_disable_telemetry: true
 ```
 
-## Troubleshooting
+## 🔒 Security considerations
+
+- Use Ansible Vault for `github_runner_access_token` and any secrets.
+- The `config.sh` runner registration task uses `no_log: true` to prevent token leakage in logs.
+- Dedicated user execution model restricts runner processes' system access.
+
+## 🧪 Check mode behavior
+
+- Most informational and verification tasks run in check mode.
+- Mutating commands (such as downloading/installing the runner, or registering it to GitHub) are skipped in check mode.
+
+## 🏷️ Tags usage
+
+- Use `--tags` to run selective parts: `prerequisites`, `user`, `install`, `logging`, `configure`, `service`, `verify`.
+
+## 🌐 Network resilience
+
+- Network operations (like downloading packages, registering runner, querying GitHub API) use timeouts and retries. Consider setting HTTP/HTTPS proxy environment variables (`github_runner_proxy_url`, `github_runner_no_proxy`) if needed.
+
+## 🔧 Troubleshooting
 
 ### Service won't start
 
@@ -588,7 +622,7 @@ groups github-runner
 sudo -l -U github-runner
 ```
 
-## File Structure
+## 📁 File Structure
 
 ```
 ansible-role-github-runner/
@@ -632,7 +666,7 @@ ansible-role-github-runner/
 └── README.md               # This documentation file
 ```
 
-## Tags
+## 🏷️ Tags
 
 - `always` - Tasks that always run (variable loading and validation)
 - `setup` - Setup tasks including prerequisites, installation, and configuration
@@ -722,7 +756,7 @@ ansible-role-github-runner/
         github_runner_ephemeral: true
 ```
 
-## Testing
+## 🧪 Testing
 
 This role includes comprehensive testing infrastructure using Molecule and GitHub Actions CI/CD.
 
@@ -849,7 +883,7 @@ The role maintains production-level quality through:
 - **Automated Quality Gates**: Prevents regression through CI/CD
 - **Mock Testing**: Safe testing without external dependencies
 
-## Contributing
+## 🤝 Contributing
 
 Contributions, bug reports, and feature requests are welcome!
 
@@ -867,10 +901,10 @@ Contributions, bug reports, and feature requests are welcome!
 - Submit a pull request describing your changes
 - For major changes, please open an issue first to discuss what you would like to change
 
-## License
+## 📝 License
 
 This project is licensed under the Apache-2.0 License - see the LICENSE file for details.
 
-## Author Information
+## 👥 Author Information
 
 This role was created by [Grzegorz Franus](https://github.com/grzegorzfranus).

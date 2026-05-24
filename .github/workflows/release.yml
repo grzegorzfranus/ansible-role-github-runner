@@ -13,6 +13,11 @@ permissions:
 jobs:
   # ================================================================
   # 1. RELEASE PLEASE
+  # ----------------------------------------------------------------
+  # Analyzes Conventional Commits since last release and creates
+  # or updates a Release PR. When the Release PR is merged, it
+  # creates a Git tag and GitHub Release automatically.
+  # Note: Commits must follow the Conventional Commits specification.
   # ================================================================
   release-please:
     name: "Release Please"
@@ -31,6 +36,11 @@ jobs:
 
   # ================================================================
   # 2. VALIDATE RELEASE PR
+  # ----------------------------------------------------------------
+  # Runs basic validation on the Release PR branch and sets the
+  # required "Merge Check" commit status via the GitHub API.
+  # This is needed because PRs created by GITHUB_TOKEN do not
+  # trigger pull_request events in other workflows.
   # ================================================================
   validate-release-pr:
     name: "Validate Release PR"
@@ -68,28 +78,32 @@ jobs:
       - name: "Lint YAML files"
         run: yamllint .
 
-      - name: "Set up Python"
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-
-      - name: "Validate Galaxy metadata"
+      - name: "Validate Galaxy metadata (meta/main.yml)"
         run: |
-          python -c '
-          import yaml
-          import sys
-          try:
-              with open("meta/main.yml", "r") as f:
-                  meta = yaml.safe_load(f)
-              desc = meta["galaxy_info"]["description"]
-              if not desc or len(desc.strip()) < 10:
-                  print("Error: galaxy_info.description is too short or empty!")
-                  sys.exit(1)
-              print("Galaxy metadata is valid.")
-          except Exception as e:
-              print(f"Validation failed: {e}")
+          if [ ! -f meta/main.yml ]; then
+            echo "::error::meta/main.yml is missing"
+            exit 1
+          fi
+          python3 -c "
+          import yaml, sys
+          with open('meta/main.yml') as f:
+              data = yaml.safe_load(f)
+          gi = data.get('galaxy_info', {})
+          errors = []
+          for field in ['author', 'description', 'license', 'min_ansible_version']:
+              if not gi.get(field):
+                  errors.append(f'Missing required field: galaxy_info.{field}')
+          desc = gi.get('description', '')
+          if desc and len(desc) > 255:
+              errors.append(f'Description too long: {len(desc)}/255 chars')
+          if not gi.get('platforms'):
+              errors.append('No platforms defined in galaxy_info')
+          if errors:
+              for e in errors:
+                  print(f'::error::{e}')
               sys.exit(1)
-          '
+          print('Galaxy metadata validation passed')
+          "
 
       - name: "Set Merge Check status on PR"
         env:
@@ -104,6 +118,13 @@ jobs:
 
   # ================================================================
   # 3. PUBLISH TO ANSIBLE GALAXY
+  # ----------------------------------------------------------------
+  # Triggered only when Release Please creates a GitHub Release
+  # (i.e., when the Release PR is merged). Uses the centralized
+  # reusable publish workflow with retry logic.
+  #
+  # This job lives here (not in a separate publish.yml) because
+  # events emitted by GITHUB_TOKEN do not trigger other workflows.
   # ================================================================
   publish-to-galaxy:
     name: "Publish to Galaxy"
