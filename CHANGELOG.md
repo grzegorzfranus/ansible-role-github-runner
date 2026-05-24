@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.5.0...v1.6.0) (2026-05-24)
+
+
+### Features
+
+* make systemd security settings configurable to allow sudo execu… ([#14](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/14)) ([b109a6b](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/b109a6b4e7adad1b309e2fc8f19634c818a44994))
+
 ## [1.5.0](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.4.1...v1.5.0) (2026-05-24)
 
 
