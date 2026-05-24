@@ -44,9 +44,9 @@ Environment="{{ key }}={{ value }}"
 Environment="{{ key }}={{ value }}"
 {% endfor %}
 
-# Security Configuration (relaxed for .NET runtime compatibility)
-NoNewPrivileges=true
-PrivateTmp=true
+# Security Configuration (relaxed for .NET runtime compatibility and sudo execution)
+NoNewPrivileges={{ github_runner_service_no_new_privileges | lower }}
+PrivateTmp={{ github_runner_service_private_tmp | lower }}
 ProtectSystem=false
 ProtectHome=false
 ReadWritePaths={{ github_runner_install_dir }} {{ github_runner_work_dir }} /tmp

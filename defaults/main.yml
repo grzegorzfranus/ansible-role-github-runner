@@ -217,6 +217,23 @@ github_runner_no_proxy: ""   # Comma-separated list of hosts to bypass proxy
 # Certificate validation
 github_runner_verify_ssl: true
 
+# Systemd service security settings
+# NOTE: Setting NoNewPrivileges=true or any of the Protect* options below
+# to true will prevent the runner from executing 'sudo' commands in workflows,
+# because they implicitly enable the kernel's NoNewPrivileges flag.
+
+# Prevent processes from gaining new privileges (blocks sudo if true)
+github_runner_service_no_new_privileges: false
+
+# Use private /tmp namespace (may isolate runner jobs from host tmp files)
+github_runner_service_private_tmp: false
+
+# Hardware/Kernel hardening options (setting to true implicitly forces NoNewPrivileges=true)
+github_runner_service_protect_kernel_tunables: false
+github_runner_service_protect_kernel_modules: false
+github_runner_service_protect_control_groups: false
+github_runner_service_restrict_realtime: false
+
 # -----------------------------------------------------------------------------
 # 7. Download Integrity
 # -----------------------------------------------------------------------------

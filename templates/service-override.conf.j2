@@ -22,11 +22,11 @@ TasksMax={{ github_runner_service_limits.tasks_max }}
 LimitNOFILE=65536
 LimitNPROC=32768
 
-# Security Restrictions (relaxed for .NET runtime compatibility)
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-RestrictRealtime=true
+# Security Restrictions (relaxed for .NET runtime compatibility and sudo execution)
+ProtectKernelTunables={{ github_runner_service_protect_kernel_tunables | lower }}
+ProtectKernelModules={{ github_runner_service_protect_kernel_modules | lower }}
+ProtectControlGroups={{ github_runner_service_protect_control_groups | lower }}
+RestrictRealtime={{ github_runner_service_restrict_realtime | lower }}
 
 # Memory and File System Protection (.NET compatible)
 MemoryDenyWriteExecute=false
