@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.6.1...v1.6.2) (2026-08-21)
+
+
+### CI/CD
+
+* align repository configuration with reference role ([#21](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/21)) ([beffc35](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/beffc35b46018ffed3ed171d27e5c56738df090f))
+
 ## [1.6.1](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.6.0...v1.6.1) (2026-06-30)
 
 
