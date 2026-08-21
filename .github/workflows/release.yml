@@ -1,41 +1,58 @@
 ---
-name: "Release"
+# =============================================================================
+# GitHub Actions Workflow: Release Automation & Galaxy Publishing
+# =============================================================================
+name: Release
 
-on:
+run-name: "Release [${{ github.ref_name }}]"
+
+"on":
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
-  contents: write
-  pull-requests: write
-  statuses: write
+  contents: read
 
 jobs:
-  # Analyze Conventional Commits to manage release PR, Git tags, and GitHub releases
+  # ---------------------------------------------------------------------------
+  # Job 1: Release Please Automation
+  # ---------------------------------------------------------------------------
   release-please:
-    name: "Run Release Please"
+    name: "🤖 Release Please"
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
-      prs_created: ${{ steps.release.outputs.prs_created }}
       release_created: ${{ steps.release.outputs.release_created }}
+      prs_created: ${{ steps.release.outputs.prs_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      pr: ${{ steps.release.outputs.pr }}
     steps:
-      - name: "Run Release Please"
-        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+      - name: "📦 Run Release Please Action"
         id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7  # v5.0.0
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # Validate Release PR branch and set "Merge Check" status via GitHub API
+  # ---------------------------------------------------------------------------
+  # Job 2: Validate Release PR Integrity
+  # ---------------------------------------------------------------------------
   validate-release-pr:
-    name: "Validate Release PR"
-    needs: [release-please]
-    if: needs.release-please.outputs.prs_created == 'true'
+    name: "🔍 Validate Release PR"
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    needs: release-please
+    if: ${{ needs.release-please.outputs.prs_created == 'true' }}
+    permissions:
+      contents: read
+      statuses: write
+      pull-requests: read
     steps:
-      - name: "Retrieve Release PR Details"
+      - name: "🔍 Retrieve Release PR Details"
         id: pr
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,18 +70,19 @@ jobs:
           echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           echo "sha=$PR_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: "Checkout Release PR Branch"
+      - name: "📥 Checkout Release PR Branch"
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: release-please--branches--main
+          persist-credentials: false
 
-      - name: "Install yamllint"
-        run: pip install yamllint
+      - name: "🧹 Run YAML Linting"
+        run: pipx run yamllint .
 
-      - name: "Validate YAML Syntax"
-        run: yamllint .
+      - name: "⚙️ Run Actionlint Validation"
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
 
-      - name: "Validate Galaxy metadata (meta/main.yml)"
+      - name: "🌌 Validate Galaxy metadata (meta/main.yml)"
         run: |
           if [ ! -f meta/main.yml ]; then
             echo "::error::meta/main.yml is missing"
@@ -91,7 +109,7 @@ jobs:
           print('Galaxy metadata validation passed')
           "
 
-      - name: "Publish Merge Check Status"
+      - name: "🚦 Publish Merge Check Status"
         env:
           GH_TOKEN: ${{ github.token }}
           PR_SHA: ${{ steps.pr.outputs.sha }}
@@ -102,11 +120,13 @@ jobs:
             -f description="All validations passed (Release PR)"
           echo "Set 'Merge Check' status on commit $PR_SHA"
 
-  # Publish role to Ansible Galaxy on release creation
+  # ---------------------------------------------------------------------------
+  # Job 3: Publish Role to Ansible Galaxy
+  # ---------------------------------------------------------------------------
   publish-to-galaxy:
-    name: "Publish to Galaxy"
-    needs: [release-please]
-    if: needs.release-please.outputs.release_created == 'true'
+    name: "🚀 Publish to Ansible Galaxy"
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     uses: grzegorzfranus/github-workflows/.github/workflows/ansible-publish.yml@main
     secrets:
       galaxy-api-key: ${{ secrets.GALAXY_API_KEY }}
