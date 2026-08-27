@@ -233,8 +233,26 @@
       - github_runner_user_sudo_nopasswd is boolean
       - github_runner_user_sudo_commands is defined
       - github_runner_user_sudo_commands is string
+      - github_runner_user_sudo_logfile_enabled is boolean
     fail_msg: "Invalid sudo configuration. All sudo settings must be properly defined"
     success_msg: "Sudo configuration is valid: enabled={{ github_runner_user_sudo_enabled }}, nopasswd={{ github_runner_user_sudo_nopasswd }}"
+
+- name: GitHub Runner | assert | Validate sudo command escaping
+  vars:
+    __github_runner_sudo_escaped_colon: '\:'
+  ansible.builtin.assert:
+    that:
+      - >-
+        github_runner_user_sudo_commands.replace(__github_runner_sudo_escaped_colon, '')
+        is not search(':')
+    fail_msg: >-
+      github_runner_user_sudo_commands contains an unescaped ':'.
+      sudoers treats ':' as the command specification separator, so an argument such as
+      'chown -R 1221:1221 /path' makes visudo fail with a misleading
+      "expecting '=' but found '/'". Escape it as '1221\:1221'.
+    success_msg: "Sudo command escaping is valid"
+  when:
+    - github_runner_user_sudo_enabled | bool
 
 - name: GitHub Runner | assert | Validate SSH key generation configuration
   ansible.builtin.assert:

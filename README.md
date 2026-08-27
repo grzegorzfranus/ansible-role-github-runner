@@ -349,6 +349,7 @@ Customize for specific requirements:
 | `github_runner_user_sudo_enabled` | Enable sudo privileges | `false` |
 | `github_runner_user_sudo_nopasswd` | Sudo without password | `true` |
 | `github_runner_user_sudo_commands` | Allowed sudo commands | `"ALL"` |
+| `github_runner_user_sudo_logfile_enabled` | Write a per-user sudo logfile (keep `false` on sudo-rs / Ubuntu 25.10+) | `false` |
 | `github_runner_user_ssh_key` | Public SSH key content | `""` |
 | `github_runner_user_ssh_key_file` | Path to SSH key file | `""` |
 | `github_runner_user_generate_ssh_key` | Generate new SSH key pair for deployment | `false` |

@@ -36,5 +36,10 @@ Defaults:{{ github_runner_user }} env_keep+="LC_MONETARY LC_NAME LC_NUMERIC LC_P
 Defaults:{{ github_runner_user }} env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY"
 Defaults:{{ github_runner_user }} env_keep+="HOME PATH RUNNER_* GITHUB_* DOTNET_*"
 
-# Logging
+# Logging (optional - see github_runner_user_sudo_logfile_enabled)
+# sudo-rs, the default sudo on Ubuntu 25.10 and later, logs only to syslog and rejects both
+# 'logfile' and 'log_year'. Leave the flag false on those releases; sudo activity is still
+# recorded to syslog.
+{% if github_runner_user_sudo_logfile_enabled | default(false) %}
 Defaults:{{ github_runner_user }} log_year, logfile="/var/log/sudo-{{ github_runner_user }}.log"
+{% endif %}
