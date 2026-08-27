@@ -127,6 +127,10 @@ github_runner_user_system: true
 github_runner_user_sudo_enabled: false
 github_runner_user_sudo_nopasswd: true
 github_runner_user_sudo_commands: "ALL"  # Can be specific commands or "ALL"
+# Write a dedicated per-user sudo logfile via a Defaults entry in the sudoers file.
+# Keep this false on Ubuntu 25.10 and later: those releases default to sudo-rs, which logs
+# only to syslog and rejects both 'logfile' and 'log_year', making the sudoers file invalid.
+github_runner_user_sudo_logfile_enabled: false
 
 # SSH key management (optional)
 github_runner_user_ssh_key: ""  # Public SSH key content
