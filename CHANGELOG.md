@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.6.2...v1.6.3) (2026-08-27)
+
+
+### Bug Fixes
+
+* make sudoers logging optional and validate sudo command escaping ([#24](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/24)) ([60f253a](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/60f253a4a129c733e952dc4eb3648d89a202f9c3))
+
 ## [1.6.2](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.6.1...v1.6.2) (2026-08-21)
 
 
