@@ -411,9 +411,11 @@ Customize for specific requirements:
 | `dateext` | Use date extension for rotated files | `false` |
 | `dateformat` | Date format for rotated files | `".%Y-%m-%d"` |
 | `olddir` | Directory to move old log files to | `""` |
-| `create_mode` | File permissions for newly created logs | `"0644"` |
-| `create_owner` | Owner for newly created log files | `github_runner_user` |
-| `create_group` | Group for newly created log files | `github_runner_user_group` |
+| `create_mode` | File permissions for newly created logs | `"0640"` when RSyslog is enabled, else `github_runner_log_file_mode` |
+| `create_owner` | Owner for newly created log files | `github_runner_log_user` when RSyslog is enabled, else `github_runner_user` |
+| `create_group` | Group for newly created log files | `github_runner_log_group` when RSyslog is enabled, else `github_runner_user_group` |
+
+> The `create_*` values follow `github_runner_rsyslog_enabled` because they must match the process that appends to the log files. With RSyslog integration active, `rsyslogd` writes them and drops privileges to the syslog user on Debian and Ubuntu, so a rotated file created for the runner service account is unwritable to it and logging stops at the first rotation.
 
 ### Security Settings
 
