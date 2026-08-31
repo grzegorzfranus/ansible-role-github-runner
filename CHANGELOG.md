@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.6.5...v1.7.0) (2026-08-31)
+
+
+### Features
+
+* validate role arguments with meta/argument_specs.yml ([#32](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/32)) ([#33](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/33)) ([d4f8876](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/d4f88769d06c6d3885902536c2254588da4f99b3))
+
 ## [1.6.5](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.6.4...v1.6.5) (2026-08-31)
 
 
