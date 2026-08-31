@@ -8,7 +8,7 @@
 # Flow:
 #   1. Stop Service                   - stop systemd service (ignore if missing)
 #   2. Check Installation Directory   - verify install dir exists before removal
-#   3. Setup Remove Token             - prepare --token argument if available
+#   3. Removal Token Acquisition      - fetch a remove-token from the GitHub API
 #   4. Unregister Runner              - run config.sh remove via become_user
 #   5. Remove Systemd Files           - delete service file and override dir
 #   6. Remove Installation Directory  - delete runner install directory
@@ -29,28 +29,125 @@
   register: _github_runner_remove_install_dir
   tags: [remove, check]
 
-- name: GitHub Runner | remove | Setup remove token argument
+# configure.yml only runs when github_runner_state is 'present', so the registration token it
+# publishes is always undefined during teardown and the previous --token argument always
+# collapsed to an empty string. GitHub also issues a distinct remove-token for unregistration,
+# so the token is acquired here rather than reused from registration.
+- name: GitHub Runner | remove | Determine runner scope
   ansible.builtin.set_fact:
-    _github_runner_remove_token_arg: >-
-      {{ '--token "' + (_github_runner_registration_token | default('')) + '"' if (_github_runner_registration_token | default('')) | length > 0 else '' }}
+    _github_runner_remove_scope: >-
+      {{ 'organization' if github_runner_organization | length > 0 else 'repository' }}
+  tags: [remove, token]
+
+- name: GitHub Runner | remove | Get organization removal token
+  ansible.builtin.uri:
+    url: "{{ github_runner_api_base_url }}/orgs/{{ github_runner_organization }}/actions/runners/remove-token"
+    method: POST
+    headers:
+      Authorization: "token {{ github_runner_access_token }}"
+      Accept: "application/vnd.github.v3+json"
+    timeout: "{{ github_runner_api_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+    status_code: [200, 201]
+  register: _github_runner_remove_org_token
+  when: >
+    _github_runner_remove_install_dir.stat.exists and
+    _github_runner_remove_scope == 'organization' and
+    github_runner_access_token | length > 0 and
+    github_runner_token_direct | length == 0 and
+    not (github_runner_test_mode | default(false))
+  failed_when: false
+  no_log: true
+  tags: [remove, token]
+
+- name: GitHub Runner | remove | Get repository removal token
+  ansible.builtin.uri:
+    url: >-
+      {{ github_runner_api_base_url }}/repos/{{
+        github_runner_repository_url if not github_runner_repository_url.startswith('http')
+        else github_runner_repository_url.split('/')[-2:] | join('/')
+      }}/actions/runners/remove-token
+    method: POST
+    headers:
+      Authorization: "token {{ github_runner_access_token }}"
+      Accept: "application/vnd.github.v3+json"
+    timeout: "{{ github_runner_api_timeout }}"
+    validate_certs: "{{ github_runner_verify_ssl }}"
+    status_code: [200, 201]
+  register: _github_runner_remove_repo_token
+  when: >
+    _github_runner_remove_install_dir.stat.exists and
+    _github_runner_remove_scope == 'repository' and
+    github_runner_repository_url | length > 0 and
+    github_runner_access_token | length > 0 and
+    github_runner_token_direct | length == 0 and
+    not (github_runner_test_mode | default(false))
+  failed_when: false
+  no_log: true
+  tags: [remove, token]
+
+- name: GitHub Runner | remove | Set removal token
+  ansible.builtin.set_fact:
+    _github_runner_remove_token: >-
+      {{
+        'mock-test-token' if github_runner_test_mode | default(false)
+        else github_runner_token_direct if github_runner_token_direct | length > 0
+        else (_github_runner_remove_org_token.json.token | default(''))
+        if (_github_runner_remove_org_token.json.token | default('')) | length > 0
+        else (_github_runner_remove_repo_token.json.token | default(''))
+      }}
+  no_log: true
+  tags: [remove, token]
+
+- name: GitHub Runner | remove | Assert a removal token is available
+  ansible.builtin.assert:
+    that:
+      - _github_runner_remove_token | length > 0
+    fail_msg: >-
+      No removal token could be obtained. Continuing would delete the runner locally while it
+      stays registered on GitHub as a permanently offline entry, with the credentials needed to
+      unregister it already gone. Provide github_runner_access_token or github_runner_token_direct,
+      or set github_runner_remove_require_unregistration to false to tear the host down anyway and
+      delete the runner in GitHub by hand.
+    success_msg: "Removal token obtained successfully"
+  when: >
+    _github_runner_remove_install_dir.stat.exists and
+    github_runner_remove_require_unregistration | bool
+  tags: [remove, token]
+
+- name: GitHub Runner | remove | Warn that the runner stays registered on GitHub
+  ansible.builtin.debug:
+    msg: >-
+      No removal token available and github_runner_remove_require_unregistration is false.
+      {{ github_runner_name }} is being deleted locally and stays registered on GitHub as an
+      offline runner until it is removed there by hand.
+  when: >
+    _github_runner_remove_install_dir.stat.exists and
+    _github_runner_remove_token | length == 0
   tags: [remove]
 
-- name: GitHub Runner | remove | Unregister runner if configured
+- name: GitHub Runner | remove | Unregister runner from GitHub
   become: true
   become_user: "{{ github_runner_user }}"
   ansible.builtin.shell: |
-    if [ -x ./config.sh ]; then
-      ./config.sh remove --unattended {{ _github_runner_remove_token_arg }} || true
+    if [ ! -x ./config.sh ]; then
+      echo "config.sh not present, nothing to unregister"
+      exit 0
     fi
+    ./config.sh remove --unattended --token "{{ _github_runner_remove_token }}"
   args:
     executable: /bin/bash
     chdir: "{{ github_runner_install_dir }}"
   when: >
-    _github_runner_remove_install_dir.stat.exists
+    _github_runner_remove_install_dir.stat.exists and
+    _github_runner_remove_token | length > 0 and
+    not (github_runner_test_mode | default(false))
   no_log: true
   register: _github_runner_remove_result
   changed_when: _github_runner_remove_result.rc == 0
-  failed_when: _github_runner_remove_result.rc not in [0, 1, 2]
+  failed_when: >
+    _github_runner_remove_result.rc != 0 and
+    github_runner_remove_require_unregistration | bool
   tags: [remove]
 
 - name: GitHub Runner | remove | Remove systemd service file

@@ -318,6 +318,9 @@ Customize for specific requirements:
 | `github_runner_ephemeral` | Runner as ephemeral (removed after job completion) | `false` |
 | `github_runner_disable_update` | Disable automatic runner updates | `false` |
 | `github_runner_state` | Desired state of runner: `present` or `absent` | `present` |
+| `github_runner_remove_require_unregistration` | Fail the teardown instead of deleting a runner that could not be unregistered from GitHub | `true` |
+
+> When `github_runner_state` is `absent`, the role acquires a removal token from the GitHub API and unregisters the runner before deleting anything locally. Set `github_runner_remove_require_unregistration` to `false` only for a teardown that must proceed without GitHub connectivity; the runner then stays in the organization as an offline entry that has to be deleted by hand.
 
 ### Multi-Instance Configuration
 

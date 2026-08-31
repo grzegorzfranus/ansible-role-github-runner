@@ -106,6 +106,14 @@ github_runner_replace: false     # Replace existing runner with same name
 github_runner_ephemeral: false   # Runner is removed after job completion
 github_runner_disable_update: false  # Disable automatic runner updates
 
+# Require a successful unregistration from GitHub before the runner is deleted locally.
+# When this is true, a teardown that cannot obtain a removal token, or whose config.sh remove
+# call fails, stops the play instead of deleting the installation directory - otherwise the
+# runner survives in the GitHub organization as a permanently offline entry that has to be
+# deleted by hand, and the credentials needed to unregister it are already gone. Set it to
+# false only for a teardown that must proceed without GitHub connectivity.
+github_runner_remove_require_unregistration: true
+
 # -----------------------------------------------------------------------------
 # 4. GitHub Runner User Management
 # -----------------------------------------------------------------------------
