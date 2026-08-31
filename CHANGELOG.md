@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.4](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.6.3...v1.6.4) (2026-08-31)
+
+
+### Bug Fixes
+
+* create rotated log files as the rsyslog user ([#26](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/26)) ([#27](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/27)) ([aa0c136](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/aa0c136cb8582adfdec4c826bb677823cf6f71cd))
+
 ## [1.6.3](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.6.2...v1.6.3) (2026-08-27)
 
 
