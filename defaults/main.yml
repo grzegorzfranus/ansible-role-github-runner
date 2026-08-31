@@ -185,6 +185,12 @@ github_runner_log_user: "syslog"               # Log file owner (system default)
 github_runner_log_group: "adm"                 # Log file group (system default)
 
 # Logrotate configuration
+# The create_* keys must match the process that appends to the log files, not the account the
+# runner executes as. With RSyslog integration enabled, rsyslogd writes them and drops privileges
+# to the syslog user on Debian and Ubuntu ($PrivDropToUser in /etc/rsyslog.conf), so a replacement
+# file created for the runner account is unwritable to it and logging stops at the first rotation.
+# They therefore follow github_runner_rsyslog_enabled, exactly as tasks/logging.yml does for the
+# log directory and the initial log files.
 github_runner_logrotate_options:
   enabled: true                    # Enable logrotate configuration for GitHub Runner logs
   frequency: "daily"               # Log rotation frequency (daily, weekly, monthly)
@@ -198,9 +204,12 @@ github_runner_logrotate_options:
   dateext: false                   # Use date extension for rotated files instead of numbers
   dateformat: ".%Y-%m-%d"          # Date format for rotated log files (requires dateext)
   olddir: ""                       # Directory to move old log files to (empty = same directory)
-  create_mode: "0644"              # File permissions for newly created log files
-  create_owner: "{{ github_runner_user }}"  # Owner for newly created log files
-  create_group: "{{ github_runner_user_group }}"  # Group for newly created log files
+  # File permissions for newly created log files
+  create_mode: "{{ '0640' if github_runner_rsyslog_enabled | default(true) else github_runner_log_file_mode }}"
+  # Owner for newly created log files
+  create_owner: "{{ github_runner_log_user if github_runner_rsyslog_enabled | default(true) else github_runner_user }}"
+  # Group for newly created log files
+  create_group: "{{ github_runner_log_group if github_runner_rsyslog_enabled | default(true) else github_runner_user_group }}"
 
 # -----------------------------------------------------------------------------
 # 6. Security Settings
