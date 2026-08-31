@@ -210,7 +210,11 @@ ansible-playbook -i inventory github-runner-setup.yml
     - role: grzegorzfranus.github_runner
       vars:
         github_runner_state: "absent"
+        github_runner_organization: "my-org"
+        github_runner_access_token: "{{ vault_github_pat }}"
 ```
+
+Removal contacts the GitHub API to obtain a removal token and unregisters the runner before anything is deleted locally, so the access token stays required during teardown. If no token can be obtained, or `config.sh remove` fails, the play stops rather than deleting a runner that would survive in the organization as a permanently offline entry. Set `github_runner_remove_require_unregistration` to `false` to tear the host down anyway.
 
 ## ⚙️ Configuration
 
@@ -655,6 +659,7 @@ ansible-role-github-runner/
 ├── handlers/
 │   └── main.yml             # Service restart and reload handlers
 ├── meta/
+│   ├── argument_specs.yml   # Role argument specification, validated before execution
 │   └── main.yml             # Role metadata and Galaxy information
 ├── tasks/
 │   ├── main.yml             # Main task orchestration
