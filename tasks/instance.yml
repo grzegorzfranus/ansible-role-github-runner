@@ -15,6 +15,7 @@
 #   6. Service Management       - Standard execution
 #   7. Verify                   - Standard execution
 #   8. Uninstallation           - Standard execution
+#   9. Handler Flush            - Run this instance's handlers before the next iteration
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -141,3 +142,16 @@
     github_runner_state == 'absent'
   tags:
     - remove
+
+# -----------------------------------------------------------------------------
+# 9. Handler Flush for Instance Scope
+# -----------------------------------------------------------------------------
+# Handlers resolve github_runner_service_name when they run, not when they are notified, and
+# Ansible defers them to the end of the play. In multi-instance mode the loop has by then
+# overwritten that fact with the last instance's value, so a notification raised while setting
+# up instance 01 restarted the last instance instead of its own. Flushing here runs each
+# instance's handlers while its own facts are still current.
+- name: "GitHub Runner | instance | Flush handlers for this instance - {{ github_runner_name }}"
+  ansible.builtin.meta: flush_handlers
+  tags:
+    - always
