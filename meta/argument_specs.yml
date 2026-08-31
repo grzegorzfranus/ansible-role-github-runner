@@ -1,0 +1,559 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Argument Specification
+# =============================================================================
+# Machine-readable specification of every variable this role accepts. Ansible
+# validates role arguments against it before execution.
+#
+# Variables whose default is a Jinja expression evaluated against gathered facts
+# are described in prose and carry no literal `default:`, so the specification
+# does not restate a template as data.
+#
+# Dictionary and list options are typed without `suboptions`, so callers passing
+# additional keys are not rejected by validation; the accepted keys are
+# documented in each option's description.
+# =============================================================================
+
+argument_specs:
+  main:
+    short_description: "Install and configure GitHub Actions self-hosted runners"
+    description:
+      - "Installs the GitHub Actions runner, registers it against a repository or an organization, and manages it as a systemd service."
+      - "Supports a dedicated system account per runner, multi-instance deployment on a single host, RSyslog-backed logging and logrotate retention."
+      - "Supports Ubuntu 22.04 (Jammy), Ubuntu 24.04 (Noble) and Debian 12 (Bookworm)."
+    author: "Grzegorz Franus"
+
+    options:
+      # -----------------------------------------------------------------------
+      # 1. General Settings
+      # -----------------------------------------------------------------------
+      github_runner_role_action:
+        description: "Which part of the role to execute"
+        type: str
+        default: "all"
+        choices:
+          - all
+          - prerequisites
+          - user
+          - install
+          - configure
+          - service
+          - logging
+
+      github_runner_state:
+        description: "Desired state of the runner installation"
+        type: str
+        default: "present"
+        choices:
+          - present
+          - absent
+
+      github_runner_enabled:
+        description: "Enable or disable the GitHub Runner installation"
+        type: bool
+        default: true
+
+      github_runner_debug:
+        description: "Emit the role's diagnostic debug output"
+        type: bool
+        default: false
+
+      github_runner_test_mode:
+        description: "Skip real GitHub API calls and systemd operations; used by the Molecule scenarios"
+        type: bool
+        default: false
+
+      # -----------------------------------------------------------------------
+      # 2. Installation
+      # -----------------------------------------------------------------------
+      github_runner_version:
+        description: "Runner version to install, or 'latest' to resolve the newest release from the GitHub API"
+        type: str
+        default: "latest"
+
+      github_runner_architecture:
+        description:
+          - "Runner package architecture."
+          - "Defaults to a value derived from ansible_facts['architecture']: 'x64' for x86_64, 'arm64' for aarch64."
+        type: str
+
+      github_runner_os:
+        description: "Runner package operating system"
+        type: str
+        default: "linux"
+
+      github_runner_install_dir:
+        description:
+          - "Installation directory for the runner."
+          - "In multi-instance mode the role appends the instance id, so instance '01' installs into '<install_dir>-01'."
+        type: str
+        default: "/opt/actions-runner"
+
+      github_runner_temp_dir:
+        description: "Temporary directory used for downloads"
+        type: str
+        default: "/tmp/github-runner-install"
+
+      github_runner_cleanup:
+        description: "Delete the downloaded package and temporary files after installation"
+        type: bool
+        default: true
+
+      github_runner_force_reinstall:
+        description: "Reinstall the runner package even when it is already present"
+        type: bool
+        default: false
+
+      github_runner_download_timeout:
+        description: "Timeout in seconds for the runner package download"
+        type: int
+        default: 300
+
+      # -----------------------------------------------------------------------
+      # 3. GitHub Configuration
+      # -----------------------------------------------------------------------
+      github_runner_server_url:
+        description: "GitHub instance URL; change it for GitHub Enterprise Server"
+        type: str
+        default: "https://github.com"
+
+      github_runner_repository_url:
+        description:
+          - "Repository the runner registers against, as 'owner/repository' or a full URL."
+          - "Leave empty for an organization-level runner."
+        type: str
+        default: ""
+
+      github_runner_organization:
+        description:
+          - "Organization the runner registers against."
+          - "Leave empty for a repository-level runner. When set, it takes precedence over the repository scope."
+        type: str
+        default: ""
+
+      github_runner_access_token:
+        description:
+          - "GitHub personal access token used to obtain registration and removal tokens from the API."
+          - "Repository runners need the 'repo' scope, organization runners need 'admin:org'."
+        type: str
+        default: ""
+        no_log: true
+
+      github_runner_repo_url_direct:
+        description: "Explicit target URL, used instead of deriving one from the repository or organization"
+        type: str
+        default: ""
+
+      github_runner_token_direct:
+        description:
+          - "Short-lived runner token supplied by the caller, used instead of deriving one from the access token."
+          - "During registration this is a registration token; during removal it must be a removal token."
+        type: str
+        default: ""
+        no_log: true
+
+      github_runner_name:
+        description:
+          - "Runner name as it appears in GitHub."
+          - "Defaults to ansible_facts['hostname']. In multi-instance mode each entry of github_runner_instances supplies its own name, falling back to '<hostname>-<id>'."
+        type: str
+
+      github_runner_group:
+        description: "Runner group inside the organization; empty selects the organization default group"
+        type: str
+        default: ""
+
+      github_runner_labels:
+        description:
+          - "Comma-separated labels applied to the runner."
+          - "Defaults to '<distribution>-<version>,self-hosted,<architecture>' derived from gathered facts."
+        type: str
+
+      github_runner_work_dir:
+        description:
+          - "Runner work directory."
+          - "Defaults to '<install_dir>/_work' and follows the per-instance install directory in multi-instance mode."
+        type: str
+
+      github_runner_replace:
+        description: "Replace an existing runner registered under the same name"
+        type: bool
+        default: false
+
+      github_runner_ephemeral:
+        description: "Register the runner as ephemeral, so GitHub deregisters it after a single job"
+        type: bool
+        default: false
+
+      github_runner_disable_update:
+        description: "Prevent the runner from updating itself"
+        type: bool
+        default: false
+
+      github_runner_remove_require_unregistration:
+        description:
+          - "Require a successful unregistration from GitHub before the runner is deleted locally."
+          - "When true, a teardown that cannot obtain a removal token, or whose config.sh remove call fails, stops the play instead of deleting the installation directory."
+          - "Set it to false only for a teardown that must proceed without GitHub connectivity; the runner then stays in the organization as an offline entry that has to be deleted by hand."
+        type: bool
+        default: true
+
+      # -----------------------------------------------------------------------
+      # 4. User Management
+      # -----------------------------------------------------------------------
+      github_runner_create_user:
+        description: "Create a dedicated system account for the runner"
+        type: bool
+        default: true
+
+      github_runner_user:
+        description:
+          - "System account the runner service runs as."
+          - "In multi-instance mode the role overrides this with 'github-runner-<id>' per instance."
+        type: str
+        default: "github-runner"
+
+      github_runner_user_group:
+        description:
+          - "Primary group of the runner account."
+          - "In multi-instance mode the role overrides this with 'github-runner-<id>' per instance."
+        type: str
+        default: "github-runner"
+
+      github_runner_user_uid:
+        description: "Fixed UID for the runner account; null lets the system allocate one"
+        type: int
+
+      github_runner_group_gid:
+        description: "Fixed GID for the runner group; null lets the system allocate one"
+        type: int
+
+      github_runner_user_home:
+        description:
+          - "Home directory of the runner account."
+          - "Defaults to '/home/<github_runner_user>'. In multi-instance mode the role overrides it with '/home/github-runner-<id>'."
+        type: str
+
+      github_runner_user_shell:
+        description: "Login shell of the runner account"
+        type: str
+        default: "/bin/bash"
+
+      github_runner_user_system:
+        description: "Create the runner account as a system account"
+        type: bool
+        default: true
+
+      github_runner_user_sudo_enabled:
+        description: "Grant the runner account sudo privileges through a dedicated sudoers file"
+        type: bool
+        default: false
+
+      github_runner_user_sudo_nopasswd:
+        description: "Allow the runner account to run its permitted sudo commands without a password"
+        type: bool
+        default: true
+
+      github_runner_user_sudo_commands:
+        description: "Sudo command scope, either 'ALL' or a comma-separated list of binaries with their argument patterns"
+        type: str
+        default: "ALL"
+
+      github_runner_user_sudo_logfile_enabled:
+        description:
+          - "Write a per-user sudo logfile through a Defaults entry in the sudoers file."
+          - "Keep this false on Ubuntu 25.10 and later, which default to sudo-rs; it implements neither 'logfile' nor 'log_year' and rejects the resulting sudoers file."
+        type: bool
+        default: false
+
+      github_runner_user_ssh_key:
+        description: "Public SSH key content to install in the runner account's authorized_keys"
+        type: str
+        default: ""
+
+      github_runner_user_ssh_key_file:
+        description: "Path to a public SSH key file to install in the runner account's authorized_keys"
+        type: str
+        default: ""
+
+      github_runner_user_generate_ssh_key:
+        description: "Generate a dedicated SSH key pair for the runner account, for deployment use"
+        type: bool
+        default: false
+
+      github_runner_user_ssh_key_type:
+        description: "Algorithm of the generated SSH key pair"
+        type: str
+        default: "ed25519"
+        choices:
+          - rsa
+          - ed25519
+          - ecdsa
+
+      github_runner_user_ssh_key_bits:
+        description: "Key size of the generated SSH key pair; applies to RSA keys"
+        type: int
+        default: 4096
+
+      github_runner_user_ssh_key_comment:
+        description:
+          - "Comment embedded in the generated SSH public key."
+          - "Defaults to '<github_runner_user>@<hostname>-github-runner'."
+        type: str
+
+      # -----------------------------------------------------------------------
+      # 5. Service and Logging
+      # -----------------------------------------------------------------------
+      github_runner_service_enabled:
+        description: "Enable the systemd unit so the runner starts at boot"
+        type: bool
+        default: true
+
+      github_runner_service_state:
+        description: "Target runtime state of the systemd unit"
+        type: str
+        default: "started"
+        choices:
+          - started
+          - stopped
+
+      github_runner_service_name:
+        description:
+          - "Name of the systemd unit."
+          - "Defaults to 'actions.runner.<organization or repository>.<github_runner_name>', so in multi-instance mode each instance gets its own unit."
+        type: str
+
+      github_runner_service_restart_policy:
+        description: "systemd Restart= policy for the runner unit"
+        type: str
+        default: "always"
+
+      github_runner_service_restart_delay:
+        description: "systemd RestartSec= delay in seconds"
+        type: int
+        default: 15
+
+      github_runner_service_environment:
+        description:
+          - "Environment variables written into the systemd unit as Environment= entries."
+          - "Keys and values are both strings."
+        type: dict
+
+      github_runner_service_log_level:
+        description: "Runner log level exported as RUNNER_LOG_LEVEL"
+        type: str
+        default: "info"
+        choices:
+          - error
+          - warn
+          - info
+          - debug
+
+      github_runner_logging_enabled:
+        description: "Write runner output to dedicated log files instead of leaving it in the journal only"
+        type: bool
+        default: false
+
+      github_runner_log_dir:
+        description:
+          - "Directory holding the dedicated log files."
+          - "In multi-instance mode the role appends the instance id, so instance '01' logs to '/var/log/github-runner-01'."
+        type: str
+        default: "/var/log/github-runner"
+
+      github_runner_log_file:
+        description: "File name of the main log inside the log directory"
+        type: str
+        default: "runner.log"
+
+      github_runner_log_error_file:
+        description: "File name of the error log inside the log directory, fed by messages of severity 3 or lower"
+        type: str
+        default: "runner-error.log"
+
+      github_runner_log_dir_mode:
+        description: "Permissions of the log directory"
+        type: str
+        default: "0755"
+
+      github_runner_log_file_mode:
+        description: "Permissions of the log files when RSyslog integration is disabled"
+        type: str
+        default: "0644"
+
+      github_runner_rsyslog_enabled:
+        description:
+          - "Route runner output through RSyslog into the dedicated log files."
+          - "When enabled, rsyslogd writes the files, so they are owned by github_runner_log_user and github_runner_log_group rather than by the runner account."
+        type: bool
+        default: true
+
+      github_runner_syslog_identifier:
+        description:
+          - "SyslogIdentifier set on the unit and matched by the RSyslog rule."
+          - "In multi-instance mode the role overrides it with 'github-runner-<id>'."
+        type: str
+        default: "github-runner"
+
+      github_runner_rsyslog_config_file:
+        description:
+          - "File name of the RSyslog rule dropped into /etc/rsyslog.d."
+          - "In multi-instance mode the role overrides it with '49-github-runner-<id>.conf'."
+        type: str
+        default: "49-github-runner.conf"
+
+      github_runner_log_user:
+        description: "Owner of the dedicated log files when RSyslog integration is enabled; must match the account rsyslogd drops to"
+        type: str
+        default: "syslog"
+
+      github_runner_log_group:
+        description: "Group of the dedicated log files when RSyslog integration is enabled"
+        type: str
+        default: "adm"
+
+      github_runner_logrotate_options:
+        description:
+          - "Logrotate policy for the dedicated log files."
+          - "Accepted keys: enabled, frequency, rotate_count, size, compress, delaycompress, missingok, notifempty, copytruncate, dateext, dateformat, olddir, create_mode, create_owner, create_group."
+          - "The create_* keys default to values derived from github_runner_rsyslog_enabled, because a rotated file must stay writable by the process that appends to it."
+        type: dict
+
+      # -----------------------------------------------------------------------
+      # 6. Security
+      # -----------------------------------------------------------------------
+      github_runner_install_dir_mode:
+        description: "Permissions of the installation directory"
+        type: str
+        default: "0755"
+
+      github_runner_disable_telemetry:
+        description: "Export DOTNET_CLI_TELEMETRY_OPTOUT to the runner service"
+        type: bool
+        default: true
+
+      github_runner_disable_analytics:
+        description: "Export RUNNER_DISABLE_ANALYTICS to the runner service"
+        type: bool
+        default: true
+
+      github_runner_proxy_url:
+        description: "HTTP and HTTPS proxy URL for the runner service and the GitHub API calls"
+        type: str
+        default: ""
+
+      github_runner_no_proxy:
+        description: "Comma-separated list of hosts that bypass the proxy"
+        type: str
+        default: ""
+
+      github_runner_verify_ssl:
+        description: "Verify TLS certificates when contacting the GitHub API and when the runner connects"
+        type: bool
+        default: true
+
+      github_runner_service_no_new_privileges:
+        description:
+          - "Set NoNewPrivileges= on the runner unit."
+          - "Leave this false when workflows call sudo; the kernel flag blocks privilege escalation for the whole service."
+        type: bool
+        default: false
+
+      github_runner_service_private_tmp:
+        description: "Set PrivateTmp= on the runner unit, isolating jobs from the host /tmp"
+        type: bool
+        default: false
+
+      github_runner_service_protect_kernel_tunables:
+        description: "Set ProtectKernelTunables= on the runner unit; enabling it implies NoNewPrivileges and blocks sudo in workflows"
+        type: bool
+        default: false
+
+      github_runner_service_protect_kernel_modules:
+        description: "Set ProtectKernelModules= on the runner unit; enabling it implies NoNewPrivileges and blocks sudo in workflows"
+        type: bool
+        default: false
+
+      github_runner_service_protect_control_groups:
+        description: "Set ProtectControlGroups= on the runner unit; enabling it implies NoNewPrivileges and blocks sudo in workflows"
+        type: bool
+        default: false
+
+      github_runner_service_restrict_realtime:
+        description: "Set RestrictRealtime= on the runner unit; enabling it implies NoNewPrivileges and blocks sudo in workflows"
+        type: bool
+        default: false
+
+      # -----------------------------------------------------------------------
+      # 7. Download Integrity
+      # -----------------------------------------------------------------------
+      github_runner_verify_checksum:
+        description: "Verify the downloaded runner package against the checksums published with the release"
+        type: bool
+        default: false
+
+      github_runner_checksums_file:
+        description: "Name of the checksum file in the GitHub release assets"
+        type: str
+        default: "sha256sums.txt"
+
+      # -----------------------------------------------------------------------
+      # 8. Advanced Options
+      # -----------------------------------------------------------------------
+      github_runner_max_jobs:
+        description: "Maximum number of concurrent jobs exported as RUNNER_MAX_JOBS"
+        type: int
+        default: 1
+
+      github_runner_service_limits:
+        description:
+          - "systemd resource bounds written into the unit override."
+          - "Accepted keys: memory_max, cpu_quota, tasks_max."
+        type: dict
+
+      github_runner_custom_env:
+        description: "Additional environment variables written into both the unit and the runner environment file"
+        type: dict
+
+      github_runner_pre_job_hook:
+        description: "Path to a script exported as RUNNER_PRE_JOB_HOOK and run before each job"
+        type: str
+        default: ""
+
+      github_runner_post_job_hook:
+        description: "Path to a script exported as RUNNER_POST_JOB_HOOK and run after each job"
+        type: str
+        default: ""
+
+      github_runner_tool_cache:
+        description: "Path exported as RUNNER_TOOL_CACHE, used to cache language and tool installs between jobs"
+        type: str
+        default: ""
+
+      github_runner_dependencies:
+        description: "Packages installed before the runner is unpacked"
+        type: list
+        elements: str
+
+      github_runner_min_disk_space_gb:
+        description: "Minimum free disk space in GB required before installation proceeds"
+        type: int
+        default: 10
+
+      github_runner_min_memory_mb:
+        description: "Minimum available memory in MB required before installation proceeds"
+        type: int
+        default: 512
+
+      # -----------------------------------------------------------------------
+      # 9. Multi-Instance Configuration
+      # -----------------------------------------------------------------------
+      github_runner_instances:
+        description:
+          - "Runner instances to deploy on the host, at most ten. An empty list selects single-runner mode."
+          - "Accepted keys per entry: id (required), name, uid, gid, labels, group, ephemeral, service_limits."
+          - "The id is used as the suffix for the account, the install directory, the log directory, the systemd unit and the RSyslog rule."
+          - "Keys other than id fall back to the corresponding role-level variable."
+        type: list
+        elements: dict
+        default: []

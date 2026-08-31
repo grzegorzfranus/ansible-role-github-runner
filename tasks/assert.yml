@@ -44,6 +44,23 @@
     fail_msg: "Invalid debug setting '{{ github_runner_debug | default('undefined') }}'. Must be boolean (true/false)"
     success_msg: "Debug flag is valid: {{ github_runner_debug }}"
 
+- name: GitHub Runner | assert | Validate lifecycle state
+  ansible.builtin.assert:
+    that:
+      - github_runner_state is defined
+      - github_runner_state is string
+      - github_runner_state in ["present", "absent"]
+    fail_msg: "Invalid state '{{ github_runner_state | default('undefined') }}'. Must be one of: present, absent"
+    success_msg: "Lifecycle state is valid: {{ github_runner_state }}"
+
+- name: GitHub Runner | assert | Validate removal unregistration requirement
+  ansible.builtin.assert:
+    that:
+      - github_runner_remove_require_unregistration is defined
+      - github_runner_remove_require_unregistration is boolean
+    fail_msg: "Invalid removal unregistration setting '{{ github_runner_remove_require_unregistration | default('undefined') }}'. Must be boolean (true/false)"
+    success_msg: "Removal unregistration requirement is valid: {{ github_runner_remove_require_unregistration }}"
+
 # -----------------------------------------------------------------------------
 # 2. Installation Settings Assertions
 # -----------------------------------------------------------------------------
