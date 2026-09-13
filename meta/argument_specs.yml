@@ -516,12 +516,12 @@ argument_specs:
         type: dict
 
       github_runner_pre_job_hook:
-        description: "Path to a script exported as RUNNER_PRE_JOB_HOOK and run before each job"
+        description: "Path to a script exported as ACTIONS_RUNNER_HOOK_JOB_STARTED and run before each job"
         type: str
         default: ""
 
       github_runner_post_job_hook:
-        description: "Path to a script exported as RUNNER_POST_JOB_HOOK and run after each job"
+        description: "Path to a script exported as ACTIONS_RUNNER_HOOK_JOB_COMPLETED and run after each job"
         type: str
         default: ""
 

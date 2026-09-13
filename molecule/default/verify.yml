@@ -177,6 +177,22 @@
       when: >
         ansible_facts['service_mgr'] == 'systemd'
 
+    - name: Verify | Read the runner environment file
+      ansible.builtin.slurp:
+        src: "/opt/actions-runner-test/.env"
+      register: _runner_env_
+      become: true
+
+    - name: Verify | Assert job hooks use the variable names the runner reads
+      ansible.builtin.assert:
+        that:
+          - "'ACTIONS_RUNNER_HOOK_JOB_STARTED=\"/usr/local/bin/pre-job-hook.sh\"' in (_runner_env_.content | b64decode)"
+          - "'ACTIONS_RUNNER_HOOK_JOB_COMPLETED=\"/usr/local/bin/post-job-hook.sh\"' in (_runner_env_.content | b64decode)"
+          - "'RUNNER_PRE_JOB_HOOK' not in (_runner_env_.content | b64decode)"
+          - "'RUNNER_POST_JOB_HOOK' not in (_runner_env_.content | b64decode)"
+        fail_msg: "Job hooks do not use the variable names the runner reads"
+        success_msg: "Job hooks verification passed"
+
     # ==========================================================================
     # File Permissions Verification
     # ==========================================================================

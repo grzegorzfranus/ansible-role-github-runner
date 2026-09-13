@@ -448,8 +448,8 @@ Customize for specific requirements:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `github_runner_custom_env` | Custom environment variables dictionary | `{}` |
-| `github_runner_pre_job_hook` | Script to run before each job | `""` |
-| `github_runner_post_job_hook` | Script to run after each job | `""` |
+| `github_runner_pre_job_hook` | Script to run before each job, exported as `ACTIONS_RUNNER_HOOK_JOB_STARTED` | `""` |
+| `github_runner_post_job_hook` | Script to run after each job, exported as `ACTIONS_RUNNER_HOOK_JOB_COMPLETED` | `""` |
 | `github_runner_dependencies` | Required package dependencies | See defaults |
 | `github_runner_min_disk_space_gb` | Minimum required disk space in GB | `10` |
 | `github_runner_min_memory_mb` | Minimum required memory in MB | `512` |
