@@ -78,6 +78,8 @@
 
     # Skip actual GitHub registration steps in testing
     github_runner_role_action: "all"
+    github_runner_pre_job_hook: "/usr/local/bin/pre-job-hook.sh"
+    github_runner_post_job_hook: "/usr/local/bin/post-job-hook.sh"
 
   roles:
     - role: ../../..
