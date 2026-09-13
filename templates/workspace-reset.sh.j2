@@ -1,0 +1,34 @@
+#!/bin/bash
+{{ ansible_managed | comment }}
+# Pre-job workspace reset for runner {{ github_runner_name }}.
+#
+# Takes ownership of this runner's work directory for its service account, so that files
+# left behind by containers running as root cannot make actions/checkout fail. The script
+# accepts no arguments and every path and account name below is fixed at render time,
+# which is what allows the sudoers rule to grant it without any argument at all.
+set -euo pipefail
+PATH="/usr/sbin:/usr/bin:/sbin:/bin"
+export PATH
+
+if [[ "$#" -ne 0 ]]; then
+  echo "This helper takes no arguments" >&2
+  exit 2
+fi
+
+readonly work_dir={{ github_runner_work_dir | quote }}
+readonly owner={{ (github_runner_user ~ ':' ~ github_runner_user_group) | quote }}
+
+# The runner account owns the installation directory, so the work directory entry is a path
+# component it can replace. chown --no-dereference would only change the link itself, but
+# refusing outright makes the condition visible instead of silently doing nothing useful.
+if [[ -L "$work_dir" ]]; then
+  echo "Refusing to reset ${work_dir}: it is a symbolic link" >&2
+  exit 1
+fi
+
+# Nothing to repair before the runner has created its work directory.
+if [[ ! -d "$work_dir" ]]; then
+  exit 0
+fi
+
+chown -R --no-dereference "$owner" "$work_dir"

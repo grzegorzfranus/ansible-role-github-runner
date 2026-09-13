@@ -13,6 +13,7 @@
 #   5. Remove Systemd Files           - delete service file and override dir
 #   6. Remove Installation Directory  - delete runner install directory
 #   7. Remove Logging Configuration   - delete logrotate and rsyslog configs
+#   8. Remove Workspace Reset Files   - delete reset scripts and sudoers
 # =============================================================================
 
 - name: GitHub Runner | remove | Stop service if present
@@ -189,3 +190,14 @@
     state: absent
   notify: restart rsyslog
   tags: [remove]
+
+- name: GitHub Runner | remove | Remove workspace reset files
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ github_runner_workspace_reset_sudoers_file }}"
+    - "{{ github_runner_workspace_reset_hook }}"
+    - "{{ github_runner_workspace_reset_helper }}"
+  tags: [remove, workspace_reset]

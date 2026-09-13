@@ -12,6 +12,7 @@
 #   4. Validate required package dependencies
 #   5. Test service state (RSyslog running)
 #   6. Verify systemd template processing and daemon-reload
+#   7. Verify pre-job workspace reset helper, hook, and sudoers
 # =============================================================================
 
 - name: Molecule | Verify Role
@@ -186,12 +187,197 @@
     - name: Verify | Assert job hooks use the variable names the runner reads
       ansible.builtin.assert:
         that:
-          - "'ACTIONS_RUNNER_HOOK_JOB_STARTED=\"/usr/local/bin/pre-job-hook.sh\"' in (_runner_env_.content | b64decode)"
+          - "'ACTIONS_RUNNER_HOOK_JOB_STARTED=\"/usr/local/libexec/github-runner/test-runner-job-started.sh\"' in (_runner_env_.content | b64decode)"
           - "'ACTIONS_RUNNER_HOOK_JOB_COMPLETED=\"/usr/local/bin/post-job-hook.sh\"' in (_runner_env_.content | b64decode)"
           - "'RUNNER_PRE_JOB_HOOK' not in (_runner_env_.content | b64decode)"
           - "'RUNNER_POST_JOB_HOOK' not in (_runner_env_.content | b64decode)"
         fail_msg: "Job hooks do not use the variable names the runner reads"
         success_msg: "Job hooks verification passed"
+
+    # ==========================================================================
+    # Pre-job Workspace Reset Verification
+    # ==========================================================================
+
+    - name: Verify | Stat workspace reset files
+      become: true
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "/usr/local/libexec/github-runner/test-runner-reset-work"
+        - "/usr/local/libexec/github-runner/test-runner-job-started.sh"
+        - "/etc/sudoers.d/test-runner-workspace-reset"
+      register: _reset_files_
+
+    - name: Verify | Assert workspace reset files exist with correct ownership and mode
+      become: true
+      ansible.builtin.assert:
+        that:
+          - _reset_files_.results[0].stat.exists
+          - _reset_files_.results[0].stat.pw_name == "root"
+          - _reset_files_.results[0].stat.gr_name == "root"
+          - _reset_files_.results[0].stat.mode == "0755"
+          - _reset_files_.results[1].stat.exists
+          - _reset_files_.results[1].stat.pw_name == "root"
+          - _reset_files_.results[1].stat.gr_name == "root"
+          - _reset_files_.results[1].stat.mode == "0755"
+          - _reset_files_.results[2].stat.exists
+          - _reset_files_.results[2].stat.pw_name == "root"
+          - _reset_files_.results[2].stat.gr_name == "root"
+          - _reset_files_.results[2].stat.mode == "0440"
+        fail_msg: "Workspace reset files do not exist or have incorrect ownership/mode"
+        success_msg: "Workspace reset files exist with correct ownership and mode"
+
+    - name: Verify | Validate workspace reset sudoers syntax
+      become: true
+      ansible.builtin.command: "/usr/sbin/visudo -cf /etc/sudoers.d/test-runner-workspace-reset"
+      changed_when: false
+      register: _visudo_check_
+
+    - name: Verify | Assert workspace reset sudoers syntax is valid
+      become: true
+      ansible.builtin.assert:
+        that:
+          - _visudo_check_.rc == 0
+        fail_msg: "Workspace reset sudoers syntax validation failed"
+        success_msg: "Workspace reset sudoers syntax is valid"
+
+    - name: Verify | Read workspace reset job-started hook script
+      become: true
+      ansible.builtin.slurp:
+        src: "/usr/local/libexec/github-runner/test-runner-job-started.sh"
+      register: _reset_hook_content_
+
+    - name: Verify | Assert job-started hook script content
+      become: true
+      ansible.builtin.assert:
+        that:
+          - "'sudo -n /usr/local/libexec/github-runner/test-runner-reset-work' in (_reset_hook_content_.content | b64decode)"
+          - "'/usr/local/bin/pre-job-hook.sh' in (_reset_hook_content_.content | b64decode)"
+        fail_msg: "Job-started hook script does not contain expected commands"
+        success_msg: "Job-started hook script content verified successfully"
+
+    - name: Verify | Create root-owned probe directory in work dir
+      become: true
+      ansible.builtin.file:
+        path: "/opt/actions-runner-test/_work/probe"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Verify | Create root-owned probe file in work dir
+      become: true
+      ansible.builtin.copy:
+        content: "probe"
+        dest: "/opt/actions-runner-test/_work/probe/root-owned"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Verify | Run workspace reset helper as test-runner via sudo
+      become: true
+      ansible.builtin.command: "runuser -u test-runner -- /usr/bin/sudo -n /usr/local/libexec/github-runner/test-runner-reset-work"
+      changed_when: false
+      register: _reset_helper_run_
+
+    - name: Verify | Stat probe file after reset helper execution
+      become: true
+      ansible.builtin.stat:
+        path: "/opt/actions-runner-test/_work/probe/root-owned"
+      register: _probe_file_stat_
+
+    - name: Verify | Assert workspace reset helper executed successfully and transferred ownership
+      become: true
+      ansible.builtin.assert:
+        that:
+          - _reset_helper_run_.rc == 0
+          - _probe_file_stat_.stat.pw_name == "test-runner"
+        fail_msg: "Workspace reset helper failed or file ownership was not transferred to test-runner"
+        success_msg: "Workspace reset helper succeeded and transferred ownership to test-runner"
+
+    - name: Verify | Run workspace reset helper with unexpected argument via sudo
+      become: true
+      ansible.builtin.command: "runuser -u test-runner -- /usr/bin/sudo -n /usr/local/libexec/github-runner/test-runner-reset-work unexpected-argument"
+      changed_when: false
+      failed_when: false
+      register: _reset_helper_arg_run_
+
+    - name: Verify | Assert sudo refuses helper when argument is passed
+      become: true
+      ansible.builtin.assert:
+        that:
+          - _reset_helper_arg_run_.rc != 0
+        fail_msg: "sudo must refuse the helper when an argument is passed"
+        success_msg: "sudo correctly refused the helper when an argument was passed"
+
+    - name: Verify | Move work directory to work.real
+      become: true
+      ansible.builtin.command: "mv /opt/actions-runner-test/_work /opt/actions-runner-test/_work.real"
+      changed_when: false
+
+    - name: Verify | Create reset-target directory owned by root
+      become: true
+      ansible.builtin.file:
+        path: "/tmp/reset-target"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Verify | Create symlink pointing to reset target
+      become: true
+      ansible.builtin.file:
+        src: "/tmp/reset-target"
+        dest: "/opt/actions-runner-test/_work"
+        state: link
+        owner: root
+        group: root
+
+    - name: Verify | Run reset helper directly on symlinked work directory
+      become: true
+      ansible.builtin.command: "/usr/local/libexec/github-runner/test-runner-reset-work"
+      changed_when: false
+      failed_when: false
+      register: _symlink_refusal_run_
+
+    - name: Verify | Assert reset helper failed with rc 1 on symlink
+      become: true
+      ansible.builtin.assert:
+        that:
+          - _symlink_refusal_run_.rc == 1
+        fail_msg: "Helper did not refuse symlinked work directory with exit code 1"
+        success_msg: "Helper correctly refused symlinked work directory with exit code 1"
+
+    - name: Verify | Stat symlink target directory
+      become: true
+      ansible.builtin.stat:
+        path: "/tmp/reset-target"
+      register: _reset_target_stat_
+
+    - name: Verify | Assert symlink target ownership remained root
+      become: true
+      ansible.builtin.assert:
+        that:
+          - _reset_target_stat_.stat.pw_name == "root"
+        fail_msg: "Symlink target ownership was modified unexpectedly"
+        success_msg: "Symlink target ownership remained root"
+
+    - name: Verify | Remove symlink
+      become: true
+      ansible.builtin.file:
+        path: "/opt/actions-runner-test/_work"
+        state: absent
+
+    - name: Verify | Restore work directory from work.real
+      become: true
+      ansible.builtin.command: "mv /opt/actions-runner-test/_work.real /opt/actions-runner-test/_work"
+      changed_when: false
+
+    - name: Verify | Clean up temporary reset target directory
+      become: true
+      ansible.builtin.file:
+        path: "/tmp/reset-target"
+        state: absent
 
     # ==========================================================================
     # File Permissions Verification
