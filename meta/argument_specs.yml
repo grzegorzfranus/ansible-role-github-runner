@@ -525,6 +525,16 @@ argument_specs:
         type: str
         default: ""
 
+      github_runner_workspace_reset_enabled:
+        description: "Take ownership of the runner work directory before each job through an argument-less root helper and a job-started hook"
+        type: bool
+        default: false
+
+      github_runner_workspace_reset_dir:
+        description: "Root-owned directory for the workspace reset helper and hook scripts; must not be writable by the runner account"
+        type: str
+        default: "/usr/local/libexec/github-runner"
+
       github_runner_tool_cache:
         description: "Path exported as RUNNER_TOOL_CACHE, used to cache language and tool installs between jobs"
         type: str

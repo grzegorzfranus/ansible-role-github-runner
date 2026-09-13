@@ -1,0 +1,5 @@
+{{ ansible_managed | comment }}
+# Allows {{ github_runner_user }} to run the pre-job workspace reset helper as root, and
+# nothing else. The trailing "" permits the command only without arguments, so the caller
+# cannot supply a path. Classic sudo and sudo-rs both enforce this form.
+{{ github_runner_user }} ALL=(root) NOPASSWD: {{ github_runner_workspace_reset_helper }} ""

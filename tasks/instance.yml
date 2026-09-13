@@ -12,10 +12,11 @@
 #   3. Install                  - Standard execution
 #   4. Logging                  - Standard execution
 #   5. Configure                - Standard execution
-#   6. Service Management       - Standard execution
-#   7. Verify                   - Standard execution
-#   8. Uninstallation           - Standard execution
-#   9. Handler Flush            - Run this instance's handlers before the next iteration
+#   6. Pre-job Workspace Reset  - Standard execution
+#   7. Service Management       - Standard execution
+#   8. Verify                   - Standard execution
+#   9. Uninstallation           - Standard execution
+#  10. Handler Flush            - Run this instance's handlers before the next iteration
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -110,7 +111,19 @@
     - configure
 
 # -----------------------------------------------------------------------------
-# 6. Service Management
+# 6. Pre-job Workspace Reset
+# -----------------------------------------------------------------------------
+- name: "GitHub Runner | instance | Manage pre-job workspace reset - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: workspace_reset.yml
+  when: >
+    github_runner_state == 'present' and
+    github_runner_role_action in ['all', 'service']
+  tags:
+    - setup
+    - workspace_reset
+
+# -----------------------------------------------------------------------------
+# 7. Service Management
 # -----------------------------------------------------------------------------
 - name: "GitHub Runner | instance | Manage system service - {{ github_runner_name }}"
   ansible.builtin.include_tasks: service.yml
@@ -122,7 +135,7 @@
     - service
 
 # -----------------------------------------------------------------------------
-# 7. Installation Verification
+# 8. Installation Verification
 # -----------------------------------------------------------------------------
 - name: "GitHub Runner | instance | Verify health operations - {{ github_runner_name }}"
   ansible.builtin.include_tasks: verify.yml
@@ -134,7 +147,7 @@
     - verify
 
 # -----------------------------------------------------------------------------
-# 8. Uninstall Runner
+# 9. Uninstall Runner
 # -----------------------------------------------------------------------------
 - name: "GitHub Runner | instance | Remove GitHub Runner - {{ github_runner_name }}"
   ansible.builtin.include_tasks: remove.yml
@@ -144,7 +157,7 @@
     - remove
 
 # -----------------------------------------------------------------------------
-# 9. Handler Flush for Instance Scope
+# 10. Handler Flush for Instance Scope
 # -----------------------------------------------------------------------------
 # Handlers resolve github_runner_service_name when they run, not when they are notified, and
 # Ansible defers them to the end of the play. In multi-instance mode the loop has by then

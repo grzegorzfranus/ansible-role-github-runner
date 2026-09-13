@@ -1,0 +1,102 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Pre-job Workspace Reset
+# =============================================================================
+# This task file configures an opt-in pre-job workspace reset. When enabled,
+# a root-owned helper takes ownership of the runner work directory before every
+# job, allowing clean checkouts even after root containers run.
+#
+# Flow:
+#   1. Directory Setup                - create root-owned reset directory
+#   2. Helper Script Deployment       - deploy argument-less root reset helper
+#   3. Job-started Hook Deployment    - deploy ACTIONS_RUNNER_HOOK_JOB_STARTED script
+#   4. Sudoers Configuration          - configure passwordless sudo for helper only
+#   5. Reset Artifact Cleanup         - remove scripts and sudoers if disabled
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Directory Setup
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | workspace_reset | Create workspace reset directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ github_runner_workspace_reset_dir }}"
+    owner: root
+    group: root
+    mode: "0755"
+    state: directory
+  when: >
+    github_runner_workspace_reset_enabled | bool
+  tags:
+    - workspace_reset
+    - security
+
+# -----------------------------------------------------------------------------
+# 2. Helper Script Deployment
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | workspace_reset | Deploy workspace reset helper script
+  become: true
+  ansible.builtin.template:
+    src: "workspace-reset.sh.j2"
+    dest: "{{ github_runner_workspace_reset_helper }}"
+    owner: root
+    group: root
+    mode: "0755"
+  when: >
+    github_runner_workspace_reset_enabled | bool
+  tags:
+    - workspace_reset
+    - security
+
+# -----------------------------------------------------------------------------
+# 3. Job-started Hook Deployment
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | workspace_reset | Deploy job-started hook script
+  become: true
+  ansible.builtin.template:
+    src: "job-started-hook.sh.j2"
+    dest: "{{ github_runner_workspace_reset_hook }}"
+    owner: root
+    group: root
+    mode: "0755"
+  when: >
+    github_runner_workspace_reset_enabled | bool
+  tags:
+    - workspace_reset
+    - security
+
+# -----------------------------------------------------------------------------
+# 4. Sudoers Configuration
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | workspace_reset | Deploy sudoers configuration for workspace reset
+  become: true
+  ansible.builtin.template:
+    src: "sudoers-workspace-reset.j2"
+    dest: "{{ github_runner_workspace_reset_sudoers_file }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
+  when: >
+    github_runner_workspace_reset_enabled | bool
+  tags:
+    - workspace_reset
+    - security
+
+# -----------------------------------------------------------------------------
+# 5. Reset Artifact Cleanup
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | workspace_reset | Remove workspace reset files when disabled
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ github_runner_workspace_reset_sudoers_file }}"
+    - "{{ github_runner_workspace_reset_hook }}"
+    - "{{ github_runner_workspace_reset_helper }}"
+  when: >
+    not (github_runner_workspace_reset_enabled | bool)
+  tags:
+    - workspace_reset
+    - security

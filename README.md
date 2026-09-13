@@ -280,6 +280,50 @@ Customize for specific requirements:
     - role: grzegorzfranus.github_runner
 ```
 
+## Pre-job Workspace Reset
+
+When container workflows or actions execute within Docker containers running as `root`, they often leave root-owned files in the runner's persistent work directory (`github_runner_work_dir`, typically `<install_dir>/_work`). Subsequent jobs executing as the unprivileged runner service account can fail during steps such as `actions/checkout` with permission errors when attempting to delete or overwrite those root-owned files.
+
+The pre-job workspace reset feature (`github_runner_workspace_reset_enabled: true`) provides a secure, automated mechanism to take ownership of the work directory for the runner service account before each job starts.
+
+### Installed Components
+
+For each configured runner instance, the role installs three root-owned components:
+
+1. **Workspace reset helper script**: Located at `{{ github_runner_workspace_reset_dir }}/{{ github_runner_user }}-reset-work` (default: `/usr/local/libexec/github-runner/<user>-reset-work`, mode `0755`). Owned by `root:root`. It accepts no arguments, refuses symbolic links, and recursively changes ownership of the work directory to the runner user and group.
+2. **Job-started hook script**: Located at `{{ github_runner_workspace_reset_dir }}/{{ github_runner_user }}-job-started.sh` (default: `/usr/local/libexec/github-runner/<user>-job-started.sh`, mode `0755`). Owned by `root:root`. Referenced in the runner environment file via `ACTIONS_RUNNER_HOOK_JOB_STARTED`, it executes the helper through `sudo -n` before every job.
+3. **Dedicated sudoers drop-in**: Located at `/etc/sudoers.d/{{ github_runner_user }}-workspace-reset` (default: `/etc/sudoers.d/<user>-workspace-reset`, mode `0440`). Owned by `root:root`.
+
+### Security Design
+
+The reset mechanism is designed around strict least-privilege principles:
+
+- **No arguments accepted**: The helper script takes no arguments (`$# -ne 0` exits with code 2) and all paths and account names (`work_dir`, `owner`) are fixed at render time. The caller cannot supply arbitrary target paths.
+- **Strict sudoers rule**: The sudoers drop-in permits execution exclusively via `{{ github_runner_user }} ALL=(root) NOPASSWD: {{ github_runner_workspace_reset_helper }} ""`. The trailing `""` form enforces that `sudo` allows the command only when invoked without arguments, preventing the caller from supplying any path or flag. This `""` syntax is supported by both classic `sudo` and `sudo-rs` (the default `sudo` implementation on Ubuntu 25.10 and later).
+- **Scripts located outside installation directory**: The helper and hook scripts reside in `github_runner_workspace_reset_dir` (`/usr/local/libexec/github-runner`), owned by `root:root`. Because the runner service account owns its installation directory and could otherwise replace scripts inside it, placing them in a root-owned directory ensures the runner account cannot modify or overwrite them. The pointer to the hook is a different matter: `ACTIONS_RUNNER_HOOK_JOB_STARTED` lives in the runner environment file, which the service account owns like the rest of its installation, so a job could repoint it to a script of its own, effective after the next service restart. That gains no privilege, because the helper stays root-owned and argument-less, but it means the design protects the privileged operation rather than guaranteeing that the reset runs.
+- **Symlink handling**: If the work directory entry itself is a symbolic link (`[[ -L "$work_dir" ]]`), the helper refuses to run and exits with code 1. Symbolic links further down the tree are handled by `chown -R --no-dereference`, which changes a link's own ownership and does not follow it. The same flag also bounds the short window between the check and the `chown`: a directory swapped for a link in that window has only the link changed.
+- **Sanitized PATH**: The helper explicitly sets and exports its own fixed `PATH` (`PATH="/usr/sbin:/usr/bin:/sbin:/bin"`) because `sudo` configurations may preserve the caller's environment.
+
+### Hook Chaining and Failure Behavior
+
+If `github_runner_pre_job_hook` is configured alongside workspace reset, the job-started hook executes the reset helper first, and then chains into the configured pre-job hook via `exec /bin/bash`. If the reset helper fails, the job immediately terminates with an error before its first step runs, which is preferable to allowing a checkout or build step to fail unexpectedly later due to a lingering root-owned file.
+
+### Example Configuration
+
+```yaml
+---
+- name: Deploy GitHub Runner with Pre-job Workspace Reset
+  hosts: all
+  become: true
+  vars:
+    github_runner_organization: "my-organization"
+    github_runner_access_token: "ghp_xxxxxxxxxxxxxxxxxxxx"
+    github_runner_workspace_reset_enabled: true
+    github_runner_pre_job_hook: "/usr/local/bin/custom-pre-job.sh"
+  roles:
+    - role: grzegorzfranus.github_runner
+```
+
 ## 📊 Variables
 
 ### General Options
@@ -450,6 +494,8 @@ Customize for specific requirements:
 | `github_runner_custom_env` | Custom environment variables dictionary | `{}` |
 | `github_runner_pre_job_hook` | Script to run before each job, exported as `ACTIONS_RUNNER_HOOK_JOB_STARTED` | `""` |
 | `github_runner_post_job_hook` | Script to run after each job, exported as `ACTIONS_RUNNER_HOOK_JOB_COMPLETED` | `""` |
+| `github_runner_workspace_reset_enabled` | Take ownership of the runner work directory before each job through an argument-less root helper and a job-started hook | `false` |
+| `github_runner_workspace_reset_dir` | Root-owned directory for the workspace reset helper and hook scripts | `"/usr/local/libexec/github-runner"` |
 | `github_runner_dependencies` | Required package dependencies | See defaults |
 | `github_runner_min_disk_space_gb` | Minimum required disk space in GB | `10` |
 | `github_runner_min_memory_mb` | Minimum required memory in MB | `512` |

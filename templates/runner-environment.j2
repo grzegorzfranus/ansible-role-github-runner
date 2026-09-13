@@ -66,7 +66,9 @@ PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:{{ github_run
 
 # Hook Scripts
 # Names are fixed by the runner; it ignores any other variable for job hooks.
-{% if github_runner_pre_job_hook %}
+{% if github_runner_workspace_reset_enabled %}
+ACTIONS_RUNNER_HOOK_JOB_STARTED="{{ github_runner_workspace_reset_hook }}"
+{% elif github_runner_pre_job_hook %}
 ACTIONS_RUNNER_HOOK_JOB_STARTED="{{ github_runner_pre_job_hook }}"
 {% endif %}
 {% if github_runner_post_job_hook %}

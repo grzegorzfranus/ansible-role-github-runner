@@ -1,0 +1,14 @@
+#!/bin/bash
+{{ ansible_managed | comment }}
+# ACTIONS_RUNNER_HOOK_JOB_STARTED hook for runner {{ github_runner_name }}.
+#
+# Resets the work directory through the argument-less root helper before every job, then
+# runs the configured pre-job hook, if any. A failure here fails the job before its first
+# step, which is preferable to a checkout that fails later on a root-owned file.
+set -euo pipefail
+
+/usr/bin/sudo -n {{ github_runner_workspace_reset_helper | quote }}
+{% if github_runner_pre_job_hook %}
+
+exec /bin/bash {{ github_runner_pre_job_hook | quote }}
+{% endif %}

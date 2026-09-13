@@ -286,6 +286,14 @@ github_runner_custom_env: {}
 github_runner_pre_job_hook: ""  # Script to run before each job
 github_runner_post_job_hook: "" # Script to run after each job
 
+# Pre-job workspace reset (optional). When enabled, a root-owned helper that accepts no
+# arguments takes ownership of this runner's work directory before every job, so files
+# left behind by containers running as root cannot make actions/checkout fail.
+github_runner_workspace_reset_enabled: false
+# Root-owned directory holding the helper and hook scripts. It must not be writable by the
+# runner account, which owns the installation directory and could otherwise replace them.
+github_runner_workspace_reset_dir: "/usr/local/libexec/github-runner"
+
 # Optional: Tool cache directory path (e.g., '/opt/actions-runner/_toolcache')
 github_runner_tool_cache: ""
 
