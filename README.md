@@ -621,7 +621,8 @@ github_runner_disable_telemetry: true
 
 ## 🏷️ Tags usage
 
-- Use `--tags` to run selective parts: `prerequisites`, `user`, `install`, `logging`, `configure`, `service`, `verify`.
+- Use `--tags` to run selective parts: `prerequisites`, `user`, `install`, `logging`, `configure`, `workspace_reset`, `service`, `verify`.
+- The base variable snapshot, the instance loop and each instance's context always run, so a selective run applies to every runner instance with that instance's own account and paths.
 
 ## 🌐 Network resilience
 
@@ -747,6 +748,7 @@ ansible-role-github-runner/
 - `install` - Package installation tasks
 - `logging` - Dedicated logging configuration and logrotate setup
 - `configure` - Runner configuration tasks
+- `workspace_reset` - Pre-job workspace reset helper, hook and sudoers drop-in
 - `service` - Service management tasks
 - `verify` - Verification and health check tasks
 

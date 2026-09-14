@@ -61,6 +61,10 @@
       {{ ('github-runner-' + _current_instance.id) if _current_instance is defined else github_runner_syslog_identifier }}
     github_runner_rsyslog_config_file: >-
       {{ ('49-github-runner-' + _current_instance.id + '.conf') if _current_instance is defined else github_runner_rsyslog_config_file }}
+  # always: every include below renders with these per-instance values; skipping this task
+  # under --tags would leave the base values in place
+  tags:
+    - always
 
 # -----------------------------------------------------------------------------
 # 2. User Management
