@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.8.0...v1.8.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* run the per-instance context tasks for every tag selection ([#41](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/41)) ([#42](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/42)) ([2d88501](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/2d885014073b4923f70d9fbd73beba7d62e582e4))
+
 ## [1.8.0](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.7.1...v1.8.0) (2026-09-13)
 
 
