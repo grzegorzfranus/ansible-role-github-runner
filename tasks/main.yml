@@ -82,17 +82,21 @@
     _base_service_limits: "{{ github_runner_service_limits }}"
   when: >
     (github_runner_instances | default([])) | length > 0
+  # always: the instance loop and its base values must exist for every --tags selection
   tags:
     - setup
     - multi_instance
+    - always
 
 - name: GitHub Runner | playbook | Single-runner execution mode
   ansible.builtin.include_tasks: instance.yml
   when: >
     (github_runner_instances | default([])) | length == 0
+  # always: the instance loop and its base values must exist for every --tags selection
   tags:
     - setup
     - single_instance
+    - always
 
 - name: GitHub Runner | playbook | Multi-runner execution mode
   ansible.builtin.include_tasks: instance.yml
@@ -102,6 +106,8 @@
     label: "{{ _current_instance.id }}"
   when: >
     (github_runner_instances | default([])) | length > 0
+  # always: the instance loop and its base values must exist for every --tags selection
   tags:
     - setup
     - multi_instance
+    - always
