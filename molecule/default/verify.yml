@@ -187,8 +187,11 @@
     - name: Verify | Assert job hooks use the variable names the runner reads
       ansible.builtin.assert:
         that:
-          - "'ACTIONS_RUNNER_HOOK_JOB_STARTED=\"/usr/local/libexec/github-runner/test-runner-job-started.sh\"' in (_runner_env_.content | b64decode)"
-          - "'ACTIONS_RUNNER_HOOK_JOB_COMPLETED=\"/usr/local/bin/post-job-hook.sh\"' in (_runner_env_.content | b64decode)"
+          - "'ACTIONS_RUNNER_HOOK_JOB_STARTED=/usr/local/libexec/github-runner/test-runner-job-started.sh' in (_runner_env_.content | b64decode)"
+          - "'ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/post-job-hook.sh' in (_runner_env_.content | b64decode)"
+          # The runner parses .env itself and keeps everything after the first '=' verbatim,
+          # so a quoted value would reach the worker with the quote characters attached.
+          - "'ACTIONS_RUNNER_HOOK_JOB_STARTED=\"' not in (_runner_env_.content | b64decode)"
           - "'RUNNER_PRE_JOB_HOOK' not in (_runner_env_.content | b64decode)"
           - "'RUNNER_POST_JOB_HOOK' not in (_runner_env_.content | b64decode)"
         fail_msg: "Job hooks do not use the variable names the runner reads"
