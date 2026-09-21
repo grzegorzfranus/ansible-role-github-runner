@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.8.1...v1.8.2) (2026-09-21)
+
+
+### Bug Fixes
+
+* write .env values unquoted and stop the listener with the service ([#44](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/44)) ([#45](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/45)) ([b514585](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/b51458527a36ed3bbd3605443b4448adb6c155f8))
+
 ## [1.8.1](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.8.0...v1.8.1) (2026-09-14)
 
 
