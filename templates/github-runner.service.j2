@@ -23,7 +23,11 @@ Wants=network-online.target
 Type=simple
 ExecStart={{ github_runner_install_dir }}/run.sh
 ExecReload=/bin/kill -HUP $MAINPID
-KillMode=process
+# Stop the whole control group, not just run.sh. With KillMode=process, systemd signals the
+# wrapper only and run.sh does not forward the signal, so Runner.Listener survives the stop,
+# keeps picking up jobs with the configuration it read at startup, and a restart leaves two
+# listeners per instance behind.
+KillMode=control-group
 Restart={{ github_runner_service_restart_policy }}
 RestartSec={{ github_runner_service_restart_delay }}
 TimeoutStartSec=120
