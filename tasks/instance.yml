@@ -126,6 +126,15 @@
     - setup
     - workspace_reset
 
+- name: "GitHub Runner | instance | Manage scheduled cleanup - {{ github_runner_name }}"
+  ansible.builtin.include_tasks: cleanup.yml
+  when: >
+    github_runner_state == 'present' and
+    github_runner_role_action in ['all', 'service']
+  tags:
+    - setup
+    - cleanup
+
 # -----------------------------------------------------------------------------
 # 7. Service Management
 # -----------------------------------------------------------------------------

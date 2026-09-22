@@ -1,0 +1,5 @@
+{{ ansible_managed | comment }}
+# Lock shared by {{ github_runner_cleanup_unit }}.service and the job-started hook of runner
+# {{ github_runner_name }}. /run is a tmpfs, so the file is recreated at every boot.
+d {{ github_runner_cleanup_lock_dir }} 0755 root root -
+f {{ github_runner_cleanup_lock_file }} 0644 root root -

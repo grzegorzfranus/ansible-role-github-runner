@@ -535,6 +535,46 @@ argument_specs:
         type: str
         default: "/usr/local/libexec/github-runner"
 
+      github_runner_cleanup_enabled:
+        description: "Enable the per-instance scheduled cleanup; requires github_runner_workspace_reset_enabled"
+        type: bool
+        default: false
+
+      github_runner_cleanup_schedule:
+        description: "systemd OnCalendar expression for the cleanup timer"
+        type: str
+        default: "*-*-* 03:00:00"
+
+      github_runner_cleanup_randomized_delay:
+        description: "RandomizedDelaySec for the cleanup timer"
+        type: str
+        default: "1h"
+
+      github_runner_cleanup_checkout_max_age_days:
+        description: "Remove a checkout whose last git fetch is older than this many days"
+        type: int
+        default: 7
+
+      github_runner_cleanup_yarn_cache_max_age_days:
+        description: "Remove Yarn cache files not read for this many days"
+        type: int
+        default: 30
+
+      github_runner_cleanup_diag_max_age_days:
+        description: "Remove runner diagnostic logs older than this many days"
+        type: int
+        default: 14
+
+      github_runner_cleanup_lock_wait_seconds:
+        description: "Seconds the job-started hook waits for a running cleanup before failing the job"
+        type: int
+        default: 900
+
+      github_runner_cleanup_lock_dir:
+        description: "Root-owned directory holding the per-instance cleanup lock files"
+        type: str
+        default: "/run/github-runner"
+
       github_runner_tool_cache:
         description: "Path exported as RUNNER_TOOL_CACHE, used to cache language and tool installs between jobs"
         type: str

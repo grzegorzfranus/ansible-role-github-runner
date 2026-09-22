@@ -433,3 +433,19 @@
     success_msg: "All instance IDs are unique"
   when: >
     github_runner_instances | length > 0
+
+- name: GitHub Runner | assert | Validate scheduled cleanup configuration
+  ansible.builtin.assert:
+    that:
+      - github_runner_cleanup_enabled is boolean
+      - not (github_runner_cleanup_enabled | bool) or (github_runner_workspace_reset_enabled | bool)
+      - github_runner_cleanup_checkout_max_age_days is integer and github_runner_cleanup_checkout_max_age_days >= 1
+      - github_runner_cleanup_yarn_cache_max_age_days is integer and github_runner_cleanup_yarn_cache_max_age_days >= 1
+      - github_runner_cleanup_diag_max_age_days is integer and github_runner_cleanup_diag_max_age_days >= 1
+      - github_runner_cleanup_lock_wait_seconds is integer and github_runner_cleanup_lock_wait_seconds >= 1
+      - github_runner_cleanup_lock_dir is string and github_runner_cleanup_lock_dir is match('^/')
+    fail_msg: >-
+      Invalid scheduled cleanup settings. github_runner_cleanup_enabled requires
+      github_runner_workspace_reset_enabled, whose job-started hook waits on the cleanup lock;
+      ages and the lock wait must be positive integers and the lock directory an absolute path.
+    success_msg: "Scheduled cleanup configuration is valid"

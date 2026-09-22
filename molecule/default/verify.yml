@@ -440,6 +440,189 @@
         fail_msg: "Configuration template files not found"
         success_msg: "Configuration template verification passed"
 
+    - name: Verify | Stat scheduled cleanup artifacts
+      become: true
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /usr/local/libexec/github-runner/test-runner-cleanup
+        - /etc/systemd/system/test-runner-cleanup.service
+        - /etc/systemd/system/test-runner-cleanup.timer
+        - /etc/tmpfiles.d/test-runner-cleanup.conf
+        - /run/github-runner/test-runner.lock
+      register: _cleanup_artifacts_
+
+    - name: Verify | Assert scheduled cleanup artifacts exist
+      ansible.builtin.assert:
+        that:
+          - _cleanup_artifacts_.results | map(attribute='stat.exists') | select | list | length == 5
+          - _cleanup_artifacts_.results[0].stat.mode == '0750'
+          - _cleanup_artifacts_.results[0].stat.pw_name == 'root'
+        fail_msg: "Scheduled cleanup artifacts are missing or the helper has the wrong owner or mode"
+        success_msg: "Scheduled cleanup artifacts are in place"
+
+    - name: Verify | Read job-started hook for the cleanup gate
+      become: true
+      ansible.builtin.slurp:
+        src: /usr/local/libexec/github-runner/test-runner-job-started.sh
+      register: _cleanup_hook_
+
+    - name: Verify | Assert job-started hook waits on the cleanup lock
+      ansible.builtin.assert:
+        that:
+          - "'flock --exclusive --wait 5 9' in (_cleanup_hook_.content | b64decode)"
+          - "'/run/github-runner/test-runner.lock' in (_cleanup_hook_.content | b64decode)"
+        fail_msg: "Job-started hook does not wait on the cleanup lock"
+        success_msg: "Job-started hook waits on the cleanup lock"
+
+    - name: Verify | Create cleanup fixtures
+      become: true
+      ansible.builtin.shell: |
+        set -euo pipefail
+        w=/opt/actions-runner-test/_work
+        mkdir -p "$w/stale-repo/stale-repo/.git" "$w/fresh-repo/fresh-repo/.git" \
+          "$w/fresh-repo/fresh-repo/.cache/trivy" "$w/_tool/keep" \
+          /opt/actions-runner-test/_diag /home/test-runner/.yarn/berry/cache
+        touch -d '10 days ago' "$w/stale-repo/stale-repo/.git/FETCH_HEAD"
+        touch "$w/fresh-repo/fresh-repo/.git/FETCH_HEAD" "$w/fresh-repo/fresh-repo/.cache/trivy/db"
+        touch -d '10 days ago' "$w/_tool/keep/old"
+        touch -d '20 days ago' /opt/actions-runner-test/_diag/Worker_old.log
+        touch /opt/actions-runner-test/_diag/Worker_new.log
+        touch /home/test-runner/.yarn/berry/cache/old.zip /home/test-runner/.yarn/berry/cache/new.zip
+        touch -a -d '40 days ago' /home/test-runner/.yarn/berry/cache/old.zip
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Verify | Run the cleanup helper while idle
+      become: true
+      ansible.builtin.command: /usr/local/libexec/github-runner/test-runner-cleanup
+      register: _cleanup_run_
+      changed_when: false
+
+    - name: Verify | Stat paths after the idle cleanup
+      become: true
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /opt/actions-runner-test/_work/stale-repo/stale-repo
+        - /opt/actions-runner-test/_work/fresh-repo/fresh-repo
+        - /opt/actions-runner-test/_work/fresh-repo/fresh-repo/.cache/trivy
+        - /opt/actions-runner-test/_work/_tool/keep/old
+        - /opt/actions-runner-test/_diag/Worker_old.log
+        - /opt/actions-runner-test/_diag/Worker_new.log
+        - /home/test-runner/.yarn/berry/cache/old.zip
+        - /home/test-runner/.yarn/berry/cache/new.zip
+        - /opt/actions-runner-test/_work/.runner-cleanup-trash
+      register: _cleanup_after_
+
+    - name: Verify | Assert the idle cleanup removed exactly the eligible paths
+      ansible.builtin.assert:
+        that:
+          - _cleanup_run_.rc == 0
+          - not _cleanup_after_.results[0].stat.exists
+          - _cleanup_after_.results[1].stat.exists
+          - not _cleanup_after_.results[2].stat.exists
+          - _cleanup_after_.results[3].stat.exists
+          - not _cleanup_after_.results[4].stat.exists
+          - _cleanup_after_.results[5].stat.exists
+          - not _cleanup_after_.results[6].stat.exists
+          - _cleanup_after_.results[7].stat.exists
+          - not _cleanup_after_.results[8].stat.exists
+        fail_msg: "Idle cleanup removed the wrong paths: {{ _cleanup_run_.stdout }}"
+        success_msg: "Idle cleanup removed stale checkout, Trivy cache, old log and unused Yarn file, and kept the rest"
+
+    - name: Verify | Recreate a stale checkout for the busy check
+      become: true
+      ansible.builtin.shell: |
+        set -euo pipefail
+        mkdir -p /opt/actions-runner-test/_work/stale-repo/stale-repo/.git
+        touch -d '10 days ago' /opt/actions-runner-test/_work/stale-repo/stale-repo/.git/FETCH_HEAD
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Verify | Start a fake job worker as the runner account
+      become: true
+      ansible.builtin.shell: "runuser -u test-runner -- bash -c 'exec -a Runner.Worker sleep 60'"
+      async: 60
+      poll: 0
+      changed_when: false
+
+    - name: Verify | Wait for the fake worker to appear
+      become: true
+      ansible.builtin.command: pgrep -u test-runner -f Runner.Worker
+      register: _fake_worker_
+      until: _fake_worker_.rc == 0
+      retries: 10
+      delay: 1
+      changed_when: false
+
+    - name: Verify | Run the cleanup helper while a job is running
+      become: true
+      ansible.builtin.command: /usr/local/libexec/github-runner/test-runner-cleanup
+      register: _cleanup_busy_
+      changed_when: false
+
+    - name: Verify | Stat the stale checkout after the busy run
+      become: true
+      ansible.builtin.stat:
+        path: /opt/actions-runner-test/_work/stale-repo/stale-repo
+      register: _cleanup_busy_stat_
+
+    - name: Verify | Assert the cleanup skipped while a job was running
+      ansible.builtin.assert:
+        that:
+          - _cleanup_busy_.rc == 0
+          - "'skipping this run' in _cleanup_busy_.stdout"
+          - _cleanup_busy_stat_.stat.exists
+        fail_msg: "Cleanup did not skip while a job was running: {{ _cleanup_busy_.stdout }}"
+        success_msg: "Cleanup skipped while a job was running"
+
+    - name: Verify | Stop the fake job worker
+      become: true
+      ansible.builtin.command: pkill -u test-runner -f Runner.Worker
+      failed_when: false
+      changed_when: false
+
+    - name: Verify | Hold the cleanup lock as a running cleanup would
+      become: true
+      ansible.builtin.shell: "flock --exclusive --close /run/github-runner/test-runner.lock sleep 30"
+      async: 30
+      poll: 0
+      changed_when: false
+
+    - name: Verify | Wait until the lock is held
+      become: true
+      ansible.builtin.command: flock --exclusive --nonblock /run/github-runner/test-runner.lock true
+      register: _lock_probe_
+      until: _lock_probe_.rc != 0
+      retries: 10
+      delay: 1
+      failed_when: false
+      changed_when: false
+
+    - name: Verify | Run the job-started hook while the cleanup lock is held
+      become: true
+      ansible.builtin.command: runuser -u test-runner -- /usr/local/libexec/github-runner/test-runner-job-started.sh
+      register: _gate_run_
+      failed_when: false
+      changed_when: false
+
+    - name: Verify | Assert the hook waited and then failed the job
+      ansible.builtin.assert:
+        that:
+          - _gate_run_.rc != 0
+          - "'Runner cleanup still holds' in _gate_run_.stderr"
+        fail_msg: "Job-started hook did not wait on the cleanup lock: rc={{ _gate_run_.rc }} {{ _gate_run_.stderr }}"
+        success_msg: "Job-started hook waited on the cleanup lock and failed the job after the timeout"
+
+    - name: Verify | Release the held cleanup lock
+      become: true
+      ansible.builtin.command: pkill -f 'flock --exclusive --close /run/github-runner/test-runner.lock'
+      failed_when: false
+      changed_when: false
+
     # ==========================================================================
     # Final Comprehensive Summary
     # ==========================================================================

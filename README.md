@@ -324,6 +324,24 @@ If `github_runner_pre_job_hook` is configured alongside workspace reset, the job
     - role: grzegorzfranus.github_runner
 ```
 
+### Scheduled cleanup
+
+The scheduled cleanup feature (`github_runner_cleanup_enabled: true`) deploys an optional per-instance root timer (`<user>-cleanup.timer`) that routinely cleans the runner's workspace, package caches, and diagnostic logs while no workflow job is executing. This feature requires `github_runner_workspace_reset_enabled: true` because the lock-waiting gate is embedded within the `job-started` hook provided by workspace reset.
+
+When triggered, the cleanup helper inspects and removes four categories of stale data based on specific age signals:
+1. **Stale git checkouts**: Checkouts located at `_work/<repo>/<checkout>` whose last git fetch (`.git/FETCH_HEAD` modification time) is older than `github_runner_cleanup_checkout_max_age_days` (default `7` days).
+2. **Trivy cache databases**: Vulnerability database caches left inside checkouts by `trivy-action`'s default cache directory (`_work/*/*/.cache/trivy`).
+3. **Unused Yarn cache files**: Cache files in the runner user's Yarn cache directory (`~/.yarn/berry/cache`) that have not been read for `github_runner_cleanup_yarn_cache_max_age_days` (default `30` days). This threshold relies on file access time (`atime`) under the standard Linux `relatime` mount option, where access timestamps are updated at most once per day upon reading, providing sufficient resolution for multi-day thresholds.
+4. **Old diagnostic logs**: Log files inside the runner's diagnostic directory (`_diag/*.log`) older than `github_runner_cleanup_diag_max_age_days` (default `14` days) based on file modification time (`mtime`).
+
+The cleanup script explicitly avoids touching the `_actions`, `_temp`, `_PipelineMapping`, and `_tool` directories inside the runner workspace. The runner process populates and writes to these directories during its internal "Set up job" lifecycle phase, which occurs before the `ACTIONS_RUNNER_HOOK_JOB_STARTED` hook is called and waits on the cleanup lock.
+
+To guarantee that a runner job never executes concurrently on a workspace undergoing cleanup, a strict locking protocol coordinates the timer and the runner worker:
+- When the cleanup timer fires, the root helper first acquires an exclusive non-blocking `flock` on the per-instance lock file (`github_runner_cleanup_lock_file`, located in `github_runner_cleanup_lock_dir`, default `/run/github-runner/<user>.lock`).
+- Only after securing the lock does it check if a job is running by probing for a `Runner.Worker` process owned by the runner account (`pgrep -u <user> -f Runner.Worker`). If a job is already active, or if the lock is held elsewhere, the cleanup run skips and exits immediately.
+- When a job is assigned to the runner, the `job-started` hook waits on the lock using `/usr/bin/flock --exclusive --wait <seconds>`.
+- The cleanup helper re-checks for an active `Runner.Worker` before every operational step and stops immediately if a job has started, ensuring that an arriving job waits at most for the completion of a single cleanup step. Furthermore, the cleanup helper unlocks the flock before removing its temporary trash staging directory (`.runner-cleanup-trash`), allowing waiting jobs to resume immediately without waiting for disk deletion.
+
 ## 📊 Variables
 
 ### General Options
@@ -496,6 +514,14 @@ If `github_runner_pre_job_hook` is configured alongside workspace reset, the job
 | `github_runner_post_job_hook` | Script to run after each job, exported as `ACTIONS_RUNNER_HOOK_JOB_COMPLETED` | `""` |
 | `github_runner_workspace_reset_enabled` | Take ownership of the runner work directory before each job through an argument-less root helper and a job-started hook | `false` |
 | `github_runner_workspace_reset_dir` | Root-owned directory for the workspace reset helper and hook scripts | `"/usr/local/libexec/github-runner"` |
+| `github_runner_cleanup_enabled` | Enable the per-instance scheduled cleanup; requires `github_runner_workspace_reset_enabled` | `false` |
+| `github_runner_cleanup_schedule` | systemd `OnCalendar` expression for the cleanup timer | `"*-*-* 03:00:00"` |
+| `github_runner_cleanup_randomized_delay` | `RandomizedDelaySec` for the cleanup timer | `"1h"` |
+| `github_runner_cleanup_checkout_max_age_days` | Remove a checkout whose last git fetch is older than this many days | `7` |
+| `github_runner_cleanup_yarn_cache_max_age_days` | Remove Yarn cache files not read for this many days | `30` |
+| `github_runner_cleanup_diag_max_age_days` | Remove runner diagnostic logs older than this many days | `14` |
+| `github_runner_cleanup_lock_wait_seconds` | Seconds the job-started hook waits for a running cleanup before failing the job | `900` |
+| `github_runner_cleanup_lock_dir` | Root-owned directory holding the per-instance cleanup lock files | `"/run/github-runner"` |
 | `github_runner_dependencies` | Required package dependencies | See defaults |
 | `github_runner_min_disk_space_gb` | Minimum required disk space in GB | `10` |
 | `github_runner_min_memory_mb` | Minimum required memory in MB | `512` |
