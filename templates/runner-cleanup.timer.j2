@@ -1,0 +1,11 @@
+{{ ansible_managed | comment }}
+[Unit]
+Description=Run the scheduled cleanup for GitHub Actions runner {{ github_runner_name }}
+
+[Timer]
+OnCalendar={{ github_runner_cleanup_schedule }}
+RandomizedDelaySec={{ github_runner_cleanup_randomized_delay }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

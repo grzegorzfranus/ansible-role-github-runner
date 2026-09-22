@@ -201,3 +201,25 @@
     - "{{ github_runner_workspace_reset_hook }}"
     - "{{ github_runner_workspace_reset_helper }}"
   tags: [remove, workspace_reset]
+
+- name: GitHub Runner | remove | Stop and disable the cleanup timer
+  become: true
+  ansible.builtin.systemd_service:
+    name: "{{ github_runner_cleanup_unit }}.timer"
+    enabled: false
+    state: stopped
+  failed_when: false
+  tags: [remove, cleanup]
+
+- name: GitHub Runner | remove | Remove cleanup artifacts
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/etc/systemd/system/{{ github_runner_cleanup_unit }}.timer"
+    - "/etc/systemd/system/{{ github_runner_cleanup_unit }}.service"
+    - "{{ github_runner_cleanup_helper }}"
+    - "{{ github_runner_cleanup_tmpfiles_file }}"
+    - "{{ github_runner_cleanup_lock_file }}"
+  tags: [remove, cleanup]

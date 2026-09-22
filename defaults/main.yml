@@ -294,6 +294,20 @@ github_runner_workspace_reset_enabled: false
 # runner account, which owns the installation directory and could otherwise replace them.
 github_runner_workspace_reset_dir: "/usr/local/libexec/github-runner"
 
+# Scheduled cleanup (optional). A per-instance root timer removes stale checkouts, Trivy
+# databases left inside checkouts, unused Yarn cache files and old diagnostic logs. It takes
+# an exclusive lock that the job-started hook waits on, and it skips or stops whenever this
+# runner has a job, so a job never starts on a workspace that is being cleaned. Requires
+# github_runner_workspace_reset_enabled, whose hook carries the wait.
+github_runner_cleanup_enabled: false
+github_runner_cleanup_schedule: "*-*-* 03:00:00"  # systemd OnCalendar expression
+github_runner_cleanup_randomized_delay: "1h"  # spreads instances and hosts apart
+github_runner_cleanup_checkout_max_age_days: 7  # by the checkout's last git fetch
+github_runner_cleanup_yarn_cache_max_age_days: 30  # by last read (atime)
+github_runner_cleanup_diag_max_age_days: 14  # by modification time
+github_runner_cleanup_lock_wait_seconds: 900  # how long a job waits for a running cleanup
+github_runner_cleanup_lock_dir: "/run/github-runner"
+
 # Optional: Tool cache directory path (e.g., '/opt/actions-runner/_toolcache')
 github_runner_tool_cache: ""
 

@@ -6,6 +6,21 @@
 # runs the configured pre-job hook, if any. A failure here fails the job before its first
 # step, which is preferable to a checkout that fails later on a root-owned file.
 set -euo pipefail
+{% if github_runner_cleanup_enabled | bool %}
+
+# Wait for a scheduled cleanup of this runner to finish before touching the workspace. The
+# cleanup holds an exclusive lock on this file for its whole run and stops as soon as it sees
+# this job's worker, so the wait is at most one cleanup step. Runner hooks have no timeout of
+# their own, hence --wait.
+if [[ -e {{ github_runner_cleanup_lock_file | quote }} ]]; then
+  exec 9<{{ github_runner_cleanup_lock_file | quote }}
+  if ! /usr/bin/flock --exclusive --wait {{ github_runner_cleanup_lock_wait_seconds | int }} 9; then
+    echo "Runner cleanup still holds {{ github_runner_cleanup_lock_file }} after {{ github_runner_cleanup_lock_wait_seconds | int }}s; failing the job instead of starting it on a workspace being cleaned." >&2
+    exit 1
+  fi
+  exec 9<&-
+fi
+{% endif %}
 
 /usr/bin/sudo -n {{ github_runner_workspace_reset_helper | quote }}
 {% if github_runner_pre_job_hook %}

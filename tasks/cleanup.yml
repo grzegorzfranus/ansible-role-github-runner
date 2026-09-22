@@ -1,0 +1,120 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Scheduled Cleanup
+# =============================================================================
+# Deploys a per-instance root timer that cleans this runner's workspace, caches and
+# diagnostic logs while no job is running. The cleanup holds an exclusive lock that the
+# job-started hook waits on, so a job assigned mid-cleanup waits instead of starting on a
+# workspace being cleaned.
+#
+# Flow:
+#   1. Lock File       - create the lock directory and file now and at every boot
+#   2. Helper Script   - deploy the root-owned cleanup helper
+#   3. Timer Units     - deploy and start the per-instance service and timer
+#   4. Disable Path    - remove every artifact when the feature is turned off
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Lock File
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | cleanup | Deploy tmpfiles.d rule for the cleanup lock
+  become: true
+  ansible.builtin.template:
+    src: "runner-cleanup-tmpfiles.conf.j2"
+    dest: "{{ github_runner_cleanup_tmpfiles_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: github_runner_cleanup_enabled | bool
+  tags:
+    - cleanup
+
+- name: GitHub Runner | cleanup | Create the cleanup lock now
+  become: true
+  ansible.builtin.command: "systemd-tmpfiles --create {{ github_runner_cleanup_tmpfiles_file | quote }}"
+  changed_when: false
+  when: github_runner_cleanup_enabled | bool
+  tags:
+    - cleanup
+
+# -----------------------------------------------------------------------------
+# 2. Helper Script
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | cleanup | Deploy the cleanup helper
+  become: true
+  ansible.builtin.template:
+    src: "runner-cleanup.sh.j2"
+    dest: "{{ github_runner_cleanup_helper }}"
+    owner: root
+    group: root
+    mode: "0750"
+  when: github_runner_cleanup_enabled | bool
+  tags:
+    - cleanup
+
+# -----------------------------------------------------------------------------
+# 3. Timer Units
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | cleanup | Deploy the cleanup service unit
+  become: true
+  ansible.builtin.template:
+    src: "runner-cleanup.service.j2"
+    dest: "/etc/systemd/system/{{ github_runner_cleanup_unit }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  when: github_runner_cleanup_enabled | bool
+  tags:
+    - cleanup
+
+- name: GitHub Runner | cleanup | Deploy the cleanup timer unit
+  become: true
+  ansible.builtin.template:
+    src: "runner-cleanup.timer.j2"
+    dest: "/etc/systemd/system/{{ github_runner_cleanup_unit }}.timer"
+    owner: root
+    group: root
+    mode: "0644"
+  when: github_runner_cleanup_enabled | bool
+  tags:
+    - cleanup
+
+- name: GitHub Runner | cleanup | Enable and start the cleanup timer
+  become: true
+  ansible.builtin.systemd_service:
+    name: "{{ github_runner_cleanup_unit }}.timer"
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: github_runner_cleanup_enabled | bool
+  tags:
+    - cleanup
+
+# -----------------------------------------------------------------------------
+# 4. Disable Path
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | cleanup | Stop and disable the cleanup timer when disabled
+  become: true
+  ansible.builtin.systemd_service:
+    name: "{{ github_runner_cleanup_unit }}.timer"
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not (github_runner_cleanup_enabled | bool)
+  tags:
+    - cleanup
+
+- name: GitHub Runner | cleanup | Remove cleanup artifacts when disabled
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/etc/systemd/system/{{ github_runner_cleanup_unit }}.timer"
+    - "/etc/systemd/system/{{ github_runner_cleanup_unit }}.service"
+    - "{{ github_runner_cleanup_helper }}"
+    - "{{ github_runner_cleanup_tmpfiles_file }}"
+    - "{{ github_runner_cleanup_lock_file }}"
+  when: not (github_runner_cleanup_enabled | bool)
+  tags:
+    - cleanup

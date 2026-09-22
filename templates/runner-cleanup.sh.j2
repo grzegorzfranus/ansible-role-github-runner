@@ -1,0 +1,106 @@
+#!/bin/bash
+{{ ansible_managed | comment }}
+# Scheduled cleanup for runner {{ github_runner_name }} ({{ github_runner_user }}).
+#
+# Runs as root from {{ github_runner_cleanup_unit }}.timer. It takes an exclusive lock that this
+# runner's job-started hook waits on, checks that no job is running, and then removes:
+#   - checkouts whose last git fetch is older than {{ github_runner_cleanup_checkout_max_age_days | int }} days,
+#   - Trivy databases left inside checkouts,
+#   - Yarn cache files not read for {{ github_runner_cleanup_yarn_cache_max_age_days | int }} days,
+#   - runner diagnostic logs older than {{ github_runner_cleanup_diag_max_age_days | int }} days.
+# Before every step it checks for a job again and stops if one has started.
+#
+# It never touches _actions, _temp, _PipelineMapping or _tool: the runner writes to those in
+# "Set up job", which runs before the job-started hook waits on the lock.
+set -euo pipefail
+shopt -s nullglob
+
+readonly runner_user={{ github_runner_user | quote }}
+readonly lock_file={{ github_runner_cleanup_lock_file | quote }}
+readonly work_dir={{ github_runner_work_dir | quote }}
+readonly diag_dir={{ (github_runner_install_dir ~ '/_diag') | quote }}
+readonly yarn_cache={{ (github_runner_user_home ~ '/.yarn/berry/cache') | quote }}
+readonly checkout_max_age_days={{ github_runner_cleanup_checkout_max_age_days | int }}
+readonly yarn_max_age_days={{ github_runner_cleanup_yarn_cache_max_age_days | int }}
+readonly diag_max_age_days={{ github_runner_cleanup_diag_max_age_days | int }}
+readonly trash="${work_dir}/.runner-cleanup-trash"
+
+log() {
+  echo "runner-cleanup[${runner_user}]: $*"
+}
+
+job_running() {
+  pgrep -u "${runner_user}" -f 'Runner.Worker' >/dev/null
+}
+
+finish() {
+  # Releasing the lock first lets a waiting job proceed while the trash is deleted; the trash
+  # holds only paths already moved out of the workspace.
+  flock --unlock 9 || true
+  local freed
+  freed=$(du -sh "${trash}" 2>/dev/null | cut -f1 || true)
+  rm -rf -- "${trash}"
+  log "$1 (freed from moved paths: ${freed:-0})"
+  exit 0
+}
+
+stop_if_busy() {
+  if job_running; then
+    finish "a job started on this runner; stopping before $1"
+  fi
+}
+
+if [[ ! -e "${lock_file}" ]]; then
+  install -D -m 0644 -o root -g root /dev/null "${lock_file}"
+fi
+exec 9<"${lock_file}"
+if ! flock --exclusive --nonblock 9; then
+  log "the lock is held elsewhere; skipping this run"
+  exit 0
+fi
+
+if job_running; then
+  log "a job is running on this runner; skipping this run"
+  exit 0
+fi
+
+rm -rf -- "${trash}"
+mkdir -p -- "${trash}"
+
+# 1. Checkouts not fetched for the configured number of days. Layout: _work/<repo>/<checkout>.
+for fetch_head in "${work_dir}"/*/*/.git/FETCH_HEAD; do
+  checkout="${fetch_head%/.git/FETCH_HEAD}"
+  case "$(basename "$(dirname "${checkout}")")" in
+    _* | .*) continue ;;
+  esac
+  if [[ -n "$(find "${fetch_head}" -mtime +"${checkout_max_age_days}" -print -quit)" ]]; then
+    stop_if_busy "moving ${checkout}"
+    mv -- "${checkout}" "${trash}/checkout.$(date +%s%N)"
+    log "moved stale checkout ${checkout}"
+  fi
+done
+
+# 2. Trivy databases left inside checkouts by trivy-action's default cache-dir.
+for trivy_cache in "${work_dir}"/*/*/.cache/trivy; do
+  case "$(basename "$(dirname "$(dirname "$(dirname "${trivy_cache}")")")")" in
+    _* | .*) continue ;;
+  esac
+  stop_if_busy "moving ${trivy_cache}"
+  mv -- "${trivy_cache}" "${trash}/trivy.$(date +%s%N)"
+  log "moved Trivy cache ${trivy_cache}"
+done
+
+# 3. Yarn cache files not read for the configured number of days. atime is refreshed at most
+#    once a day under relatime, which is enough resolution for a threshold in days.
+if [[ -d "${yarn_cache}" ]]; then
+  stop_if_busy "pruning the Yarn cache"
+  find "${yarn_cache}" -type f -atime +"${yarn_max_age_days}" -delete
+fi
+
+# 4. Diagnostic logs older than the configured number of days.
+if [[ -d "${diag_dir}" ]]; then
+  stop_if_busy "pruning diagnostic logs"
+  find "${diag_dir}" -type f -name '*.log' -mtime +"${diag_max_age_days}" -delete
+fi
+
+finish "cleanup completed"

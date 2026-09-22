@@ -1,0 +1,10 @@
+{{ ansible_managed | comment }}
+[Unit]
+Description=Scheduled cleanup for GitHub Actions runner {{ github_runner_name }}
+After={{ github_runner_service_name }}.service
+
+[Service]
+Type=oneshot
+ExecStart={{ github_runner_cleanup_helper }}
+Nice=10
+IOSchedulingClass=idle
