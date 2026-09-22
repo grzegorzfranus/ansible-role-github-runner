@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.8.2...v1.9.0) (2026-09-22)
+
+
+### Features
+
+* scheduled per-instance cleanup gated by a lock the job-started hook waits on ([#47](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/47)) ([#48](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/48)) ([a79427a](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/a79427ad84f6843fadb88d785b55b43865256cc9))
+
 ## [1.8.2](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.8.1...v1.8.2) (2026-09-21)
 
 
