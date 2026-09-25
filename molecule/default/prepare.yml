@@ -155,6 +155,17 @@
 
     - name: Prepare | Create a drop-in directory for the stale runner unit
       become: true
+      ansible.builtin.file:
+        path: "/etc/systemd/system/actions.runner.TEST-ORG.test-runner-{{ ansible_facts['hostname'] }}.service.d"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
+
+    - name: Prepare | Create a drop-in for the stale runner unit
+      become: true
       ansible.builtin.copy:
         content: |
           [Service]
