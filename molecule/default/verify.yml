@@ -13,6 +13,7 @@
 #   5. Test service state (RSyslog running)
 #   6. Verify systemd template processing and daemon-reload
 #   7. Verify pre-job workspace reset helper, hook, and sudoers
+#   8. Verify removal of the unit left under a differently cased organization name
 # =============================================================================
 
 - name: Molecule | Verify Role
@@ -640,3 +641,49 @@
           - "File Permissions: Passed"
           - "Template Processing: Passed"
           - "Role is ready for production use"
+
+    # ==========================================================================
+    # Stale Unit Removal Verification
+    # ==========================================================================
+    - name: Verify | Stat unit files for this runner name
+      ansible.builtin.stat:
+        path: "/etc/systemd/system/{{ item }}"
+      loop:
+        - "actions.runner.TEST-ORG.test-runner-{{ ansible_facts['hostname'] }}.service"
+        - "actions.runner.TEST-ORG.test-runner-{{ ansible_facts['hostname'] }}.service.d"
+        - "actions.runner.other-org.test-runner-{{ ansible_facts['hostname'] }}.service"
+      register: _verify_stale_unit_files
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
+
+    - name: Verify | Assert the stale unit is removed and the other organization's unit is kept
+      ansible.builtin.assert:
+        that:
+          - not _verify_stale_unit_files.results[0].stat.exists
+          - not _verify_stale_unit_files.results[1].stat.exists
+          - _verify_stale_unit_files.results[2].stat.exists
+        fail_msg: "Stale unit handling is wrong: {{ _verify_stale_unit_files.results | map(attribute='stat.exists') | list }}"
+        success_msg: "Stale unit removed, the other organization's unit left in place"
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
+
+    - name: Verify | Look for the child the stale unit left behind on stop
+      ansible.builtin.command:
+        argv:
+          - pgrep
+          - -f
+          - stale-listener-probe
+      register: _verify_stale_unit_orphan
+      changed_when: false
+      failed_when: false
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
+
+    - name: Verify | Assert no process of the stale unit is left running
+      ansible.builtin.assert:
+        that:
+          - _verify_stale_unit_orphan.rc == 1
+        fail_msg: "Processes of the stale unit still running: {{ _verify_stale_unit_orphan.stdout_lines }}"
+        success_msg: "No process of the stale unit is left running"
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'

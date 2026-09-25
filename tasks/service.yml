@@ -7,21 +7,35 @@
 # and ensures proper service configuration.
 #
 # Flow:
-#   1.  Service File Creation         - deploy systemd unit from template
-#   2.  Service Limits & Environment  - deploy override.conf with resource limits
-#   3.  Service Environment File      - deploy runner environment variables
-#   4.  Systemd Daemon Management     - reload daemon when unit files change
-#   5.  Service State Management      - check status, enable/start/stop as needed
-#   6.  Service Status Verification   - confirm active state matches target
-#   7.  Service Health Check          - wait for stability, validate health
-#   8.  Process Information           - list Runner.Listener/Worker processes
-#   9.  Service Configuration Valid.  - verify service and override files exist
-#  10.  Service Management Summary    - display service status report
-#  11.  Service Logs Display          - show recent journald entries
+#   1.  Stale Unit Removal            - remove units left under another organization case
+#   2.  Service File Creation         - deploy systemd unit from template
+#   3.  Service Limits & Environment  - deploy override.conf with resource limits
+#   4.  Service Environment File      - deploy runner environment variables
+#   5.  Systemd Daemon Management     - reload daemon when unit files change
+#   6.  Service State Management      - check status, enable/start/stop as needed
+#   7.  Service Status Verification   - confirm active state matches target
+#   8.  Service Health Check          - wait for stability, validate health
+#   9.  Process Information           - list Runner.Listener/Worker processes
+#  10.  Service Configuration Valid.  - verify service and override files exist
+#  11.  Service Management Summary    - display service status report
+#  12.  Service Logs Display          - show recent journald entries
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# 1. Service File Creation
+# 1. Stale Unit Removal
+# -----------------------------------------------------------------------------
+# Runs before the unit is rendered: a unit for this install directory under another spelling
+# of the organization would otherwise keep a second listener on the same registration.
+- name: GitHub Runner | service | Remove service units left under another organization case
+  ansible.builtin.include_tasks: stale_units.yml
+  when: >
+    github_runner_service_remove_stale_units | bool
+  tags:
+    - service
+    - systemd
+
+# -----------------------------------------------------------------------------
+# 2. Service File Creation
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Create systemd service file
   become: true
@@ -53,7 +67,7 @@
     - systemd
 
 # -----------------------------------------------------------------------------
-# 2. Service Limits and Environment Configuration
+# 3. Service Limits and Environment Configuration
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Create service override file for resource limits
   become: true
@@ -74,7 +88,7 @@
     - systemd
 
 # -----------------------------------------------------------------------------
-# 3. Service Environment File
+# 4. Service Environment File
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Create service environment file
   become: true
@@ -91,7 +105,7 @@
     - environment
 
 # -----------------------------------------------------------------------------
-# 4. Systemd Daemon Management
+# 5. Systemd Daemon Management
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Set systemd reload flags
   ansible.builtin.set_fact:
@@ -113,7 +127,7 @@
     - systemd
 
 # -----------------------------------------------------------------------------
-# 5. Service State Management
+# 6. Service State Management
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Check current service status
   ansible.builtin.systemd:
@@ -245,7 +259,7 @@
     - verify
 
 # -----------------------------------------------------------------------------
-# 6. Service Status Verification
+# 7. Service Status Verification
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Check service status
   ansible.builtin.systemd:
@@ -282,7 +296,7 @@
     - logs
 
 # -----------------------------------------------------------------------------
-# 7. Service Health Check
+# 8. Service Health Check
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Wait for service to stabilize
   ansible.builtin.wait_for:
@@ -334,7 +348,7 @@
     - health
 
 # -----------------------------------------------------------------------------
-# 8. Process Information
+# 9. Process Information
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Get runner process information
   ansible.builtin.shell: |
@@ -364,7 +378,7 @@
     - processes
 
 # -----------------------------------------------------------------------------
-# 9. Service Configuration Validation
+# 10. Service Configuration Validation
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Verify service file exists
   ansible.builtin.stat:
@@ -394,7 +408,7 @@
     - verify
 
 # -----------------------------------------------------------------------------
-# 10. Service Management Summary
+# 11. Service Management Summary
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Display service summary
   ansible.builtin.debug:
@@ -415,7 +429,7 @@
     - summary
 
 # -----------------------------------------------------------------------------
-# 11. Service Logs Display
+# 12. Service Logs Display
 # -----------------------------------------------------------------------------
 - name: GitHub Runner | service | Display recent service logs
   ansible.builtin.debug:

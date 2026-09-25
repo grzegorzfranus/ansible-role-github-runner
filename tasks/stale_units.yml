@@ -1,0 +1,193 @@
+---
+# =============================================================================
+# Ansible Role: GitHub Runner - Stale Service Unit Removal
+# =============================================================================
+# github_runner_service_name embeds github_runner_organization. GitHub matches organization
+# names case-insensitively, systemd unit names are case-sensitive, so a redeploy with the
+# organization spelled differently ("comlia" first, "Comlia" later) renders a second unit for
+# the same install directory while the first one stays enabled. Both listeners then share one
+# registration: one loops on a broker session conflict, and whenever both hold a session each
+# job is delivered twice, the second worker fails on an existing _diag/pages file and the job
+# is reported as failed although every step succeeded. This file removes units whose name
+# differs from github_runner_service_name only in letter case, before the current unit is
+# rendered.
+#
+# Flow:
+#   1. Discovery          - find unit files for this runner name under another organization case
+#   2. Unit Deactivation  - stop and disable each stale unit
+#   3. Leftover Discovery - find processes still in a stale unit's cgroup (KillMode=process)
+#   4. Process Shutdown   - SIGTERM the leftovers, wait, SIGKILL what is still running
+#   5. File Removal       - delete the unit file and drop-in directory, reload systemd
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Discovery
+# -----------------------------------------------------------------------------
+- name: GitHub Runner | stale_units | Find service units for this runner name
+  ansible.builtin.find:
+    paths: "/etc/systemd/system"
+    patterns: "actions.runner.*.{{ github_runner_name }}.service"
+    file_type: file
+  register: _github_runner_stale_unit_candidates
+  tags:
+    - service
+    - systemd
+
+# Only a case-insensitive match of the full current name counts as stale: a unit registered
+# for another organization under the same runner name is left alone.
+- name: GitHub Runner | stale_units | Select units that differ only in letter case
+  ansible.builtin.set_fact:
+    _github_runner_stale_units: >-
+      {{ _github_runner_stale_unit_candidates.files
+         | map(attribute='path')
+         | map('basename')
+         | map('regex_replace', '\.service$', '')
+         | reject('equalto', github_runner_service_name)
+         | select('match', '(?i)^' ~ (github_runner_service_name | regex_escape) ~ '$')
+         | list }}
+  tags:
+    - service
+    - systemd
+
+- name: GitHub Runner | stale_units | Report stale units found
+  ansible.builtin.debug:
+    msg: >-
+      Removing {{ _github_runner_stale_units | join(', ') }}: same install directory as
+      {{ github_runner_service_name }} under another organization case
+  when: >
+    _github_runner_stale_units | length > 0
+  tags:
+    - service
+    - systemd
+
+# -----------------------------------------------------------------------------
+# 2. Unit Deactivation
+# -----------------------------------------------------------------------------
+# Stopping first prevents Restart= from bringing the unit back while its processes are being
+# signalled below.
+- name: GitHub Runner | stale_units | Stop and disable stale units
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ item }}.service"
+    state: stopped
+    enabled: false
+  loop: "{{ _github_runner_stale_units }}"
+  tags:
+    - service
+    - systemd
+
+# -----------------------------------------------------------------------------
+# 3. Leftover Discovery
+# -----------------------------------------------------------------------------
+# Units rendered before KillMode=control-group only signal run.sh on stop, which does not
+# forward the signal, so Runner.Listener keeps running in the old cgroup. systemd may already
+# have released that cgroup from the unit, so its members are found through /proc instead of
+# systemctl. shell: the /proc/<pid>/cgroup glob needs pathname expansion.
+- name: GitHub Runner | stale_units | Find processes left in stale unit cgroups
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      grep -lsF -e '/{{ item }}.service' /proc/[0-9]*/cgroup
+      | sed -E 's#^/proc/([0-9]+)/cgroup$#\1#' || true
+    executable: /bin/bash
+  loop: "{{ _github_runner_stale_units }}"
+  register: _github_runner_stale_unit_leftovers
+  changed_when: false
+  tags:
+    - service
+    - systemd
+
+- name: GitHub Runner | stale_units | Collect leftover process IDs
+  ansible.builtin.set_fact:
+    _github_runner_stale_unit_pids: >-
+      {{ _github_runner_stale_unit_leftovers.results | default([])
+         | map(attribute='stdout_lines') | flatten | unique }}
+  tags:
+    - service
+    - systemd
+
+# -----------------------------------------------------------------------------
+# 4. Process Shutdown
+# -----------------------------------------------------------------------------
+# SIGTERM lets the listener end its broker session; SIGKILL only for what ignores it.
+- name: GitHub Runner | stale_units | Signal leftover processes to terminate
+  become: true
+  ansible.builtin.command:
+    argv: "{{ ['kill', '-TERM'] + _github_runner_stale_unit_pids }}"
+  when: >
+    _github_runner_stale_unit_pids | length > 0
+  changed_when: true
+  failed_when: false
+  tags:
+    - service
+    - systemd
+
+- name: GitHub Runner | stale_units | Wait for leftover processes to exit
+  ansible.builtin.command:
+    argv: "{{ ['ps', '-o', 'pid=', '-p', _github_runner_stale_unit_pids | join(',')] }}"
+  register: _github_runner_stale_unit_survivors
+  until: >
+    _github_runner_stale_unit_survivors.stdout | trim | length == 0
+  retries: 10
+  delay: 3
+  when: >
+    _github_runner_stale_unit_pids | length > 0
+  changed_when: false
+  failed_when: false
+  tags:
+    - service
+    - systemd
+
+- name: GitHub Runner | stale_units | Kill processes that ignored SIGTERM
+  become: true
+  ansible.builtin.command:
+    argv: "{{ ['kill', '-KILL'] + (_github_runner_stale_unit_survivors.stdout.split()) }}"
+  when: >
+    _github_runner_stale_unit_pids | length > 0 and
+    _github_runner_stale_unit_survivors.stdout | default('') | trim | length > 0
+  changed_when: true
+  failed_when: false
+  tags:
+    - service
+    - systemd
+
+# -----------------------------------------------------------------------------
+# 5. File Removal
+# -----------------------------------------------------------------------------
+# The restart gives the current unit a clean broker session: its listener may have been
+# looping on the session conflict the stale unit caused.
+- name: GitHub Runner | stale_units | Remove stale unit files and drop-in directories
+  become: true
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item.0 }}.service{{ item.1 }}"
+    state: absent
+  loop: "{{ _github_runner_stale_units | product(['', '.d']) | list }}"
+  notify:
+    - restart github runner
+  tags:
+    - service
+    - systemd
+
+- name: GitHub Runner | stale_units | Reload systemd after removing stale units
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: >
+    _github_runner_stale_units | length > 0
+  tags:
+    - service
+    - systemd
+
+- name: GitHub Runner | stale_units | Clear the failed state of removed units
+  become: true
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - reset-failed
+      - "{{ item }}.service"
+  loop: "{{ _github_runner_stale_units }}"
+  changed_when: false
+  failed_when: false
+  tags:
+    - service
+    - systemd
