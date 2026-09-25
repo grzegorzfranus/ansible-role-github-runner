@@ -309,6 +309,13 @@ argument_specs:
         type: bool
         default: true
 
+      github_runner_service_remove_stale_units:
+        description: >-
+          Remove systemd units for the same runner name whose organization part differs from
+          github_runner_organization only in letter case, stopping every process they left running
+        type: bool
+        default: true
+
       github_runner_service_state:
         description: "Target runtime state of the systemd unit"
         type: str

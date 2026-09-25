@@ -165,6 +165,11 @@ github_runner_service_name: >-
   else github_runner_repository_url.split('/')[-1] if github_runner_repository_url
   else 'default' }}.{{ github_runner_name }}
 
+# Remove units whose name differs from github_runner_service_name only in letter case, e.g.
+# actions.runner.comlia.<name> left behind after a redeploy with "Comlia". GitHub accepts either
+# spelling, systemd keeps both units, and two listeners on one registration run jobs twice.
+github_runner_service_remove_stale_units: true
+
 # Service restart policy
 github_runner_service_restart_policy: "always"
 github_runner_service_restart_delay: 15

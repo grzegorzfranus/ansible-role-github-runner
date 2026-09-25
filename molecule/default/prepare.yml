@@ -13,6 +13,8 @@
 #   4. Start and prepare mock rsyslog service
 #   5. Wait for systemd to settle
 #   6. Create target test directories and mock GitHub API responses
+#   7. Install a running unit under a differently cased organization name, whose
+#      KillMode=process leaves a child behind on stop, and an unrelated organization's unit
 # =============================================================================
 
 - name: Molecule | Prepare
@@ -126,6 +128,81 @@
           }
         dest: /tmp/mock-github-api-response.json
         mode: '0644'
+
+    # Mirrors a host first deployed with "TEST-ORG" and later with "test-org": the role must
+    # remove this unit and the orphan its stop leaves, and keep the other organization's unit.
+    - name: Prepare | Install a stale runner unit under a differently cased organization
+      become: true
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Stale runner unit (molecule)
+
+          [Service]
+          Type=simple
+          ExecStart=/bin/bash -c "(exec -a stale-listener-probe sleep infinity) & exec sleep infinity"
+          KillMode=process
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: "/etc/systemd/system/actions.runner.TEST-ORG.test-runner-{{ ansible_facts['hostname'] }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
+
+    - name: Prepare | Create a drop-in directory for the stale runner unit
+      become: true
+      ansible.builtin.file:
+        path: "/etc/systemd/system/actions.runner.TEST-ORG.test-runner-{{ ansible_facts['hostname'] }}.service.d"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
+
+    - name: Prepare | Create a drop-in for the stale runner unit
+      become: true
+      ansible.builtin.copy:
+        content: |
+          [Service]
+          TasksMax=64
+        dest: "/etc/systemd/system/actions.runner.TEST-ORG.test-runner-{{ ansible_facts['hostname'] }}.service.d/override.conf"
+        owner: root
+        group: root
+        mode: '0644'
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
+
+    - name: Prepare | Install a runner unit that belongs to another organization
+      become: true
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Runner unit of another organization (molecule)
+
+          [Service]
+          Type=simple
+          ExecStart=/bin/true
+        dest: "/etc/systemd/system/actions.runner.other-org.test-runner-{{ ansible_facts['hostname'] }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
+
+    - name: Prepare | Start the stale runner unit
+      become: true
+      ansible.builtin.systemd:
+        name: "actions.runner.TEST-ORG.test-runner-{{ ansible_facts['hostname'] }}.service"
+        state: started
+        enabled: true
+        daemon_reload: true
+      when: >
+        ansible_facts['service_mgr'] == 'systemd'
 
     - name: Prepare | Display preparation summary
       ansible.builtin.debug:

@@ -434,6 +434,7 @@ To guarantee that a runner job never executes concurrently on a workspace underg
 | `github_runner_service_enabled` | Enable service on boot | `true` |
 | `github_runner_service_state` | Service state | `"started"` |
 | `github_runner_service_name` | Systemd service name | Auto-generated |
+| `github_runner_service_remove_stale_units` | Remove units for the same runner left under a differently cased organization name (e.g. `comlia` vs `Comlia`), including listeners they left running | `true` |
 | `github_runner_service_restart_policy` | Service restart policy | `"always"` |
 | `github_runner_service_restart_delay` | Restart delay in seconds | `15` |
 | `github_runner_service_environment` | Service environment variables | See defaults |
@@ -744,6 +745,7 @@ ansible-role-github-runner/
 │   ├── logging.yml          # Dedicated logging configuration and logrotate setup
 │   ├── configure.yml        # Runner registration and configuration
 │   ├── service.yml          # Systemd service management
+│   ├── stale_units.yml      # Removal of units left under a differently cased organization name
 │   ├── verify.yml           # Installation verification and health checks
 │   └── remove.yml           # Runner uninstallation (state: absent)
 ├── templates/
