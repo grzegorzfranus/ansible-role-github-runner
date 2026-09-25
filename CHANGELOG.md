@@ -5,6 +5,13 @@ All notable changes to this GitHub Runner Ansible role will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.9.0...v1.9.1) (2026-09-25)
+
+
+### Bug Fixes
+
+* remove service units left under a differently cased organization name ([#50](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/50)) ([#51](https://github.com/grzegorzfranus/ansible-role-github-runner/issues/51)) ([9fda5ec](https://github.com/grzegorzfranus/ansible-role-github-runner/commit/9fda5ec0427bf78788b2bdec6f10be03d35f87fe))
+
 ## [1.9.0](https://github.com/grzegorzfranus/ansible-role-github-runner/compare/v1.8.2...v1.9.0) (2026-09-22)
 
 
